@@ -9,7 +9,6 @@ require_role('student');
 $pdo = db();
 
 $userId = (int) $_SESSION['user_id'];
-$fullName = $_SESSION['full_name'] ?? 'Student';
 
 // Get report ID from the URL.
 $reportId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
@@ -19,7 +18,9 @@ $history = [];
 $databaseError = false;
 
 if (!$reportId || $reportId < 1) {
+
     http_response_code(404);
+
 } else {
 
     try {
@@ -99,31 +100,32 @@ if (!$reportId || $reportId < 1) {
         $databaseError = true;
 
     }
+
 }
 
 
-// Status badge colors.
+// Status badge classes.
 function reportDetailsStatusClass(string $status): string
 {
     switch ($status) {
 
         case 'Pending':
-            return 'bg-warning text-dark';
+            return 'status-pending';
 
         case 'Under Inspection':
-            return 'bg-info text-dark';
+            return 'status-inspection';
 
         case 'Under Repair':
-            return 'bg-primary';
+            return 'status-repair';
 
         case 'Resolved':
-            return 'bg-success';
+            return 'status-resolved';
 
         case 'Unresolved':
-            return 'bg-danger';
+            return 'status-unresolved';
 
         default:
-            return 'bg-secondary';
+            return 'status-default';
     }
 }
 
@@ -165,374 +167,920 @@ if ($report && !empty($report['photo_path'])) {
 <head>
 
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Report Details | PCare</title>
+    <title>Report Details | LabSync</title>
 
+    <!-- Bootstrap -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
 
+    <!-- Bootstrap Icons -->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet"
+    >
+
+    <!-- Google Font -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <style>
+
+        :root {
+            --primary: #4E968B;
+            --deep-green: #245B54;
+            --soft-mint: #E5F0ED;
+            --background: #F7F8F6;
+            --text: #303C39;
+            --muted: #7B8985;
+            --border: #E7ECE9;
+            --white: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+        }
+
+        .page-container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .page-heading {
+            margin-bottom: 25px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: var(--deep-green);
+            text-decoration: none;
+            font-weight: 650;
+            font-size: 12px;
+            margin-bottom: 22px;
+        }
+
+        .back-link:hover {
+            color: var(--primary);
+        }
+
+        .page-heading h1 {
+            font-size: clamp(24px, 4vw, 30px);
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .page-heading p {
+            color: var(--muted);
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        .content-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 5px 20px rgba(36, 91, 84, .035);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .card-content {
+            padding: 24px;
+        }
+
+        .section-heading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 750;
+            margin-bottom: 20px;
+        }
+
+        .section-icon {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+            background: var(--soft-mint);
+            color: var(--deep-green);
+            border-radius: 9px;
+            font-size: 15px;
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 18px;
+            padding: 25px;
+        }
+
+        .reference-label {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            margin-bottom: 8px;
+        }
+
+        .reference-number {
+            color: var(--deep-green);
+            font-size: clamp(17px, 3vw, 23px);
+            font-weight: 800;
+            letter-spacing: -.5px;
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 13px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 750;
+            white-space: nowrap;
+        }
+
+        .status-pending {
+            background: #FFF3D6;
+            color: #936000;
+        }
+
+        .status-inspection {
+            background: #E2F2F8;
+            color: #236780;
+        }
+
+        .status-repair {
+            background: #E7ECFF;
+            color: #4056A5;
+        }
+
+        .status-resolved {
+            background: #E4F4E9;
+            color: #287342;
+        }
+
+        .status-unresolved {
+            background: #FBE8E8;
+            color: #A23E3E;
+        }
+
+        .status-default {
+            background: #EDF0EF;
+            color: #58645F;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 23px 30px;
+        }
+
+        .info-label {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 650;
+            margin-bottom: 7px;
+        }
+
+        .info-value {
+            color: var(--text);
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
+        }
+
+        .description-box {
+            padding: 17px;
+            background: #FAFCFB;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: #4E5D58;
+            font-size: 12px;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        .photo-container {
+            padding: 14px;
+            background: #FAFCFB;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        .report-photo {
+            display: block;
+            max-width: 100%;
+            max-height: 400px;
+            object-fit: contain;
+            border-radius: 7px;
+        }
+
+        .no-photo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--muted);
+            font-size: 11px;
+            padding: 16px;
+            background: #FAFCFB;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+        }
+
+        .no-photo i {
+            font-size: 19px;
+            color: var(--primary);
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 7px;
+        }
+
+        .timeline-item {
+            position: relative;
+            display: flex;
+            gap: 15px;
+            padding-bottom: 27px;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-marker-column {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .timeline-marker {
+            position: relative;
+            z-index: 1;
+            width: 29px;
+            height: 29px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: var(--soft-mint);
+            color: var(--deep-green);
+            font-size: 12px;
+        }
+
+        .timeline-line {
+            position: absolute;
+            top: 29px;
+            bottom: -1px;
+            width: 2px;
+            background: #DDEAE5;
+        }
+
+        .timeline-item:last-child .timeline-line {
+            display: none;
+        }
+
+        .timeline-content {
+            flex: 1;
+            min-width: 0;
+            padding: 2px 0 0;
+        }
+
+        .timeline-title {
+            font-size: 12px;
+            font-weight: 750;
+            margin-bottom: 9px;
+        }
+
+        .timeline-meta {
+            color: var(--muted);
+            font-size: 10px;
+            line-height: 1.7;
+        }
+
+        .timeline-remarks {
+            margin-top: 12px;
+            padding: 12px 14px;
+            background: #FAFCFB;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: #5E6B66;
+            font-size: 11px;
+            line-height: 1.7;
+            overflow-wrap: anywhere;
+        }
+
+        .additional-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding: 13px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+        }
+
+        .additional-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .additional-label {
+            color: var(--muted);
+        }
+
+        .additional-value {
+            color: var(--text);
+            font-weight: 700;
+            text-align: right;
+        }
+
+        .secondary-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #C8DCD6;
+            border-radius: 9px;
+            padding: 11px 16px;
+            color: var(--deep-green);
+            font-size: 11px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: .2s ease;
+        }
+
+        .secondary-button:hover {
+            background: var(--deep-green);
+            border-color: var(--deep-green);
+            color: var(--white);
+        }
+
+        .empty-history {
+            padding: 25px;
+            background: #FAFCFB;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .empty-history i {
+            display: block;
+            font-size: 24px;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .not-found-icon {
+            width: 65px;
+            height: 65px;
+            display: grid;
+            place-items: center;
+            background: var(--soft-mint);
+            color: var(--deep-green);
+            border-radius: 18px;
+            font-size: 26px;
+            margin: 0 auto 18px;
+        }
+
+        .not-found-card {
+            padding: 50px 25px;
+            text-align: center;
+        }
+
+        .not-found-card h2 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 9px;
+        }
+
+        .not-found-card p {
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+
+        .primary-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--deep-green);
+            color: var(--white);
+            border: 1px solid var(--deep-green);
+            border-radius: 9px;
+            padding: 11px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: .2s ease;
+        }
+
+        .primary-button:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: var(--white);
+        }
+
+        .alert {
+            border: none;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 575px) {
+
+            .card-content {
+                padding: 19px;
+            }
+
+            .report-header {
+                padding: 20px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+
+            .additional-row {
+                flex-direction: column;
+                gap: 5px;
+            }
+
+            .additional-value {
+                text-align: left;
+            }
+
+        }
+
+    </style>
+
 </head>
 
-<body class="bg-light">
+<body>
 
-    <!-- NAVIGATION -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <!-- SHARED STUDENT NAVIGATION -->
+    <?php require_once __DIR__ . '/../includes/student-nav.php'; ?>
 
-        <div class="container">
 
-            <a class="navbar-brand fw-bold" href="dashboard.php">
-                PCare
-            </a>
+    <main class="container py-4 py-lg-5">
 
-            <div class="ms-auto d-flex align-items-center">
+        <div class="page-container">
 
-                <span class="text-white me-3">
-                    <?= e($fullName) ?>
-                </span>
+            <!-- PAGE HEADING -->
+            <div class="page-heading">
 
-                <form action="../logout.php" method="POST">
+                <a href="my-reports.php" class="back-link">
+                    <i class="bi bi-arrow-left"></i>
+                    Back to My Reports
+                </a>
 
-                    <?= csrf_field() ?>
+                <h1>Report Details</h1>
 
-                    <button
-                        type="submit"
-                        class="btn btn-outline-light btn-sm"
-                    >
-                        Logout
-                    </button>
-
-                </form>
+                <p>
+                    Review your submitted computer issue and monitor
+                    its maintenance status history.
+                </p>
 
             </div>
 
-        </div>
 
-    </nav>
+            <!-- DATABASE ERROR -->
+            <?php if ($databaseError): ?>
 
+                <div class="alert alert-danger">
 
-    <!-- MAIN CONTENT -->
-    <main class="container py-5">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
 
-        <div class="mb-4">
-
-            <a href="my-reports.php" class="text-decoration-none">
-                ← Back to My Reports
-            </a>
-
-            <h2 class="mt-3">Report Details</h2>
-
-            <p class="text-muted">
-                View your submitted computer issue and its maintenance status history.
-            </p>
-
-        </div>
-
-
-        <!-- DATABASE ERROR -->
-        <?php if ($databaseError): ?>
-
-            <div class="alert alert-danger">
-                Unable to retrieve report details.
-                Please try again later.
-            </div>
-
-
-        <!-- REPORT NOT FOUND -->
-        <?php elseif (!$report): ?>
-
-            <div class="card border-0 shadow-sm">
-
-                <div class="card-body text-center py-5">
-
-                    <h4>Report Not Found</h4>
-
-                    <p class="text-muted">
-                        This report does not exist or you do not have permission to view it.
-                    </p>
-
-                    <a href="my-reports.php" class="btn btn-success">
-                        Return to My Reports
-                    </a>
+                    Unable to retrieve report details.
+                    Please try again later.
 
                 </div>
 
-            </div>
+
+            <!-- REPORT NOT FOUND -->
+            <?php elseif (!$report): ?>
+
+                <section class="content-card not-found-card">
+
+                    <div class="not-found-icon">
+                        <i class="bi bi-file-earmark-x"></i>
+                    </div>
+
+                    <h2>Report Not Found</h2>
+
+                    <p>
+                        This report does not exist or you do not have
+                        permission to view it.
+                    </p>
+
+                    <a href="my-reports.php" class="primary-button">
+                        <i class="bi bi-arrow-left"></i>
+                        Return to My Reports
+                    </a>
+
+                </section>
 
 
-        <!-- REPORT INFORMATION -->
-        <?php else: ?>
+            <!-- REPORT INFORMATION -->
+            <?php else: ?>
 
-            <!-- REPORT HEADER -->
-            <div class="card border-0 shadow-sm mb-4">
 
-                <div class="card-body p-4">
+                <!-- REPORT HEADER -->
+                <section class="content-card">
 
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                    <div class="report-header">
 
                         <div>
 
-                            <p class="text-muted mb-1">
+                            <div class="reference-label">
                                 Reference Number
-                            </p>
+                            </div>
 
-                            <h4 class="fw-bold">
+                            <h2 class="reference-number">
                                 <?= e($report['reference_no']) ?>
-                            </h4>
+                            </h2>
 
                         </div>
 
-                        <span class="badge fs-6 <?= e(reportDetailsStatusClass($report['status'])) ?>">
+                        <span class="status-badge <?= e(reportDetailsStatusClass($report['status'])) ?>">
+
+                            <i class="bi bi-circle-fill"
+                               style="font-size: 7px;"></i>
+
                             <?= e($report['status']) ?>
+
                         </span>
 
                     </div>
 
-                </div>
-
-            </div>
+                </section>
 
 
-            <!-- COMPUTER INFORMATION -->
-            <div class="card border-0 shadow-sm mb-4">
+                <!-- COMPUTER INFORMATION -->
+                <section class="content-card">
 
-                <div class="card-body p-4">
+                    <div class="card-content">
 
-                    <h5 class="mb-3">
-                        Computer Information
-                    </h5>
+                        <h2 class="section-heading">
 
-                    <div class="row g-3">
+                            <span class="section-icon">
+                                <i class="bi bi-pc-display"></i>
+                            </span>
 
-                        <div class="col-md-6">
+                            Computer Information
 
-                            <p class="text-muted mb-1">
-                                Computer Unit
-                            </p>
+                        </h2>
 
-                            <h6>
-                                <?= e($report['unit_code']) ?>
-                            </h6>
+                        <div class="info-grid">
 
-                        </div>
+                            <div>
 
-                        <div class="col-md-6">
+                                <div class="info-label">
+                                    Computer Unit
+                                </div>
 
-                            <p class="text-muted mb-1">
-                                Laboratory Location
-                            </p>
+                                <div class="info-value">
+                                    <?= e($report['unit_code']) ?>
+                                </div>
 
-                            <h6>
-                                <?= e($report['location']) ?>
-                            </h6>
+                            </div>
 
-                        </div>
+                            <div>
 
-                        <div class="col-md-6">
+                                <div class="info-label">
+                                    Laboratory Location
+                                </div>
 
-                            <p class="text-muted mb-1">
-                                Issue Category
-                            </p>
+                                <div class="info-value">
+                                    <?= e($report['location']) ?>
+                                </div>
 
-                            <h6>
-                                <?= e($report['category_name']) ?>
-                            </h6>
+                            </div>
 
-                        </div>
+                            <div>
 
-                        <div class="col-md-6">
+                                <div class="info-label">
+                                    Issue Category
+                                </div>
 
-                            <p class="text-muted mb-1">
-                                Date Submitted
-                            </p>
+                                <div class="info-value">
+                                    <?= e($report['category_name']) ?>
+                                </div>
 
-                            <h6>
-                                <?= e(reportDetailsDate($report['created_at'])) ?>
-                            </h6>
+                            </div>
+
+                            <div>
+
+                                <div class="info-label">
+                                    Date Submitted
+                                </div>
+
+                                <div class="info-value">
+                                    <?= e(reportDetailsDate($report['created_at'])) ?>
+                                </div>
+
+                            </div>
 
                         </div>
 
                     </div>
 
-                </div>
-
-            </div>
+                </section>
 
 
-            <!-- ISSUE DESCRIPTION -->
-            <div class="card border-0 shadow-sm mb-4">
+                <!-- ISSUE DESCRIPTION -->
+                <section class="content-card">
 
-                <div class="card-body p-4">
+                    <div class="card-content">
 
-                    <h5 class="mb-3">
-                        Problem Description
-                    </h5>
+                        <h2 class="section-heading">
 
-                    <p class="mb-0">
-                        <?= nl2br(e($report['description'])) ?>
-                    </p>
+                            <span class="section-icon">
+                                <i class="bi bi-card-text"></i>
+                            </span>
 
-                </div>
+                            Problem Description
 
-            </div>
+                        </h2>
 
+                        <div class="description-box">
+                            <?= nl2br(e($report['description'])) ?>
+                        </div>
 
-            <!-- ATTACHED PHOTO -->
-            <div class="card border-0 shadow-sm mb-4">
+                    </div>
 
-                <div class="card-body p-4">
-
-                    <h5 class="mb-3">
-                        Attached Photo
-                    </h5>
-
-                    <?php if ($photoUrl): ?>
-
-                        <a
-                            href="<?= e($photoUrl) ?>"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                        >
-
-                            <img
-                                src="<?= e($photoUrl) ?>"
-                                alt="Uploaded computer issue photo"
-                                class="img-fluid rounded"
-                                style="max-height: 350px;"
-                            >
-
-                        </a>
-
-                    <?php else: ?>
-
-                        <p class="text-muted mb-0">
-                            No photo was attached to this report.
-                        </p>
-
-                    <?php endif; ?>
-
-                </div>
-
-            </div>
+                </section>
 
 
-            <!-- REPORT TIMELINE -->
-            <div class="card border-0 shadow-sm mb-4">
+                <!-- ATTACHED PHOTO -->
+                <section class="content-card">
 
-                <div class="card-body p-4">
+                    <div class="card-content">
 
-                    <h5 class="mb-4">
-                        Issue Status History
-                    </h5>
+                        <h2 class="section-heading">
 
-                    <?php if (empty($history)): ?>
+                            <span class="section-icon">
+                                <i class="bi bi-image"></i>
+                            </span>
 
-                        <p class="text-muted">
-                            No status history is available.
-                        </p>
+                            Attached Photo
 
-                    <?php else: ?>
+                        </h2>
 
-                        <div class="list-group list-group-flush">
+                        <?php if ($photoUrl): ?>
 
-                            <?php foreach ($history as $item): ?>
+                            <div class="photo-container">
 
-                                <div class="list-group-item px-0 py-3">
+                                <a
+                                    href="<?= e($photoUrl) ?>"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
 
-                                    <div class="d-flex justify-content-between flex-wrap gap-2">
+                                    <img
+                                        src="<?= e($photoUrl) ?>"
+                                        alt="Uploaded computer issue photo"
+                                        class="report-photo"
+                                    >
 
-                                        <div>
+                                </a>
 
-                                            <?php if ($item['old_status'] === null): ?>
+                            </div>
 
-                                                <strong>Initial Report Submission</strong>
+                            <p class="text-muted mt-2 mb-0"
+                               style="font-size: 10px;">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>
+                                Select the image to view it in a new tab.
+                            </p>
 
-                                            <?php else: ?>
+                        <?php else: ?>
 
-                                                <strong>
-                                                    <?= e($item['old_status']) ?>
-                                                    →
-                                                    <?= e($item['new_status']) ?>
-                                                </strong>
+                            <div class="no-photo">
 
-                                            <?php endif; ?>
+                                <i class="bi bi-image"></i>
 
-                                            <div class="mt-2">
+                                No photo was attached to this report.
 
-                                                <span class="badge <?= e(reportDetailsStatusClass($item['new_status'])) ?>">
-                                                    <?= e($item['new_status']) ?>
-                                                </span>
+                            </div>
+
+                        <?php endif; ?>
+
+                    </div>
+
+                </section>
+
+
+                <!-- ISSUE STATUS HISTORY -->
+                <section class="content-card">
+
+                    <div class="card-content">
+
+                        <h2 class="section-heading">
+
+                            <span class="section-icon">
+                                <i class="bi bi-clock-history"></i>
+                            </span>
+
+                            Issue Status History
+
+                        </h2>
+
+                        <?php if (empty($history)): ?>
+
+                            <div class="empty-history">
+
+                                <i class="bi bi-clock"></i>
+
+                                No status history is available for this report.
+
+                            </div>
+
+                        <?php else: ?>
+
+                            <div class="timeline">
+
+                                <?php foreach ($history as $item): ?>
+
+                                    <div class="timeline-item">
+
+                                        <div class="timeline-marker-column">
+
+                                            <div class="timeline-marker">
+
+                                                <i class="bi bi-check2"></i>
 
                                             </div>
 
+                                            <div class="timeline-line"></div>
+
                                         </div>
 
-                                        <small class="text-muted">
-                                            <?= e(reportDetailsDate($item['changed_at'])) ?>
-                                        </small>
+
+                                        <div class="timeline-content">
+
+                                            <?php if ($item['old_status'] === null): ?>
+
+                                                <div class="timeline-title">
+                                                    Initial Report Submission
+                                                </div>
+
+                                            <?php else: ?>
+
+                                                <div class="timeline-title">
+
+                                                    <?= e($item['old_status']) ?>
+
+                                                    <i class="bi bi-arrow-right mx-1"
+                                                       style="color: #4E968B;"></i>
+
+                                                    <?= e($item['new_status']) ?>
+
+                                                </div>
+
+                                            <?php endif; ?>
+
+
+                                            <span class="status-badge <?= e(reportDetailsStatusClass($item['new_status'])) ?>">
+                                                <?= e($item['new_status']) ?>
+                                            </span>
+
+
+                                            <div class="timeline-meta mt-2">
+
+                                                <div>
+                                                    <i class="bi bi-calendar3 me-1"></i>
+                                                    <?= e(reportDetailsDate($item['changed_at'])) ?>
+                                                </div>
+
+                                                <div>
+                                                    <i class="bi bi-person me-1"></i>
+                                                    Updated by:
+                                                    <?= e($item['changed_by_name'] ?? 'Unknown user') ?>
+                                                </div>
+
+                                            </div>
+
+
+                                            <?php if (!empty($item['remarks'])): ?>
+
+                                                <div class="timeline-remarks">
+
+                                                    <strong>Remarks</strong>
+
+                                                    <div class="mt-1">
+                                                        <?= nl2br(e($item['remarks'])) ?>
+                                                    </div>
+
+                                                </div>
+
+                                            <?php endif; ?>
+
+                                        </div>
 
                                     </div>
 
-                                    <?php if (!empty($item['remarks'])): ?>
+                                <?php endforeach; ?>
 
-                                        <p class="text-muted mt-2 mb-1">
-                                            <?= nl2br(e($item['remarks'])) ?>
-                                        </p>
+                            </div>
 
-                                    <?php endif; ?>
+                        <?php endif; ?>
 
-                                    <small class="text-muted">
-                                        Updated by:
-                                        <?= e($item['changed_by_name'] ?? 'Unknown user') ?>
-                                    </small>
+                    </div>
 
-                                </div>
+                </section>
 
-                            <?php endforeach; ?>
+
+                <!-- ADDITIONAL INFORMATION -->
+                <section class="content-card">
+
+                    <div class="card-content">
+
+                        <h2 class="section-heading">
+
+                            <span class="section-icon">
+                                <i class="bi bi-info-circle"></i>
+                            </span>
+
+                            Additional Information
+
+                        </h2>
+
+                        <div class="additional-row">
+
+                            <span class="additional-label">
+                                Last Updated
+                            </span>
+
+                            <span class="additional-value">
+                                <?= e(reportDetailsDate($report['updated_at'])) ?>
+                            </span>
 
                         </div>
 
-                    <?php endif; ?>
+                        <div class="additional-row">
 
-                </div>
+                            <span class="additional-label">
+                                Resolved Date
+                            </span>
 
-            </div>
+                            <span class="additional-value">
+                                <?= e(reportDetailsDate($report['resolved_at'])) ?>
+                            </span>
 
+                        </div>
 
-            <!-- ADDITIONAL INFORMATION -->
-            <div class="card border-0 shadow-sm mb-4">
+                    </div>
 
-                <div class="card-body p-4">
-
-                    <h5 class="mb-3">
-                        Additional Information
-                    </h5>
-
-                    <p>
-                        <strong>Last Updated:</strong>
-                        <?= e(reportDetailsDate($report['updated_at'])) ?>
-                    </p>
-
-                    <p class="mb-0">
-                        <strong>Resolved Date:</strong>
-                        <?= e(reportDetailsDate($report['resolved_at'])) ?>
-                    </p>
-
-                </div>
-
-            </div>
+                </section>
 
 
-            <a href="my-reports.php" class="btn btn-outline-secondary">
-                Back to My Reports
-            </a>
+                <!-- BACK BUTTON -->
+                <a href="my-reports.php" class="secondary-button">
 
-        <?php endif; ?>
+                    <i class="bi bi-arrow-left"></i>
+
+                    Back to My Reports
+
+                </a>
+
+            <?php endif; ?>
+
+        </div>
 
     </main>
+
+
+    <!-- BOOTSTRAP JAVASCRIPT -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

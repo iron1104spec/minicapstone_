@@ -38,10 +38,15 @@ if (!$user) {
     exit('User account not found.');
 }
 
-// Account status
 $accountStatus = (int) $user['is_active'] === 1
     ? 'Active'
     : 'Inactive';
+
+$initial = strtoupper(substr(trim($user['full_name']), 0, 1));
+
+$createdDate = !empty($user['created_at'])
+    ? date('F d, Y', strtotime($user['created_at']))
+    : 'Not available';
 
 ?>
 
@@ -53,7 +58,15 @@ $accountStatus = (int) $user['is_active'] === 1
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>My Profile | PCare</title>
+    <title>My Profile | LabSync</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -67,94 +80,349 @@ $accountStatus = (int) $user['is_active'] === 1
 
     <style>
 
+        :root {
+            --primary: #4E968B;
+            --deep-green: #245B54;
+            --soft-mint: #E5F0ED;
+            --background: #F7F8F6;
+            --text: #303C39;
+            --muted: #7A8983;
+            --border: #E8EEEB;
+            --white: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            background: #F7F8F6;
-            color: #303C39;
-            font-family: Arial, sans-serif;
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
         }
 
-        .main-content {
-            padding: 35px;
+        .topbar {
+            min-height: 72px;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
         }
 
-        .page-title {
-            color: #245B54;
-            font-weight: 700;
+        .topbar-inner {
+            width: 100%;
+            max-width: 1400px;
+            margin: auto;
+            padding: 0 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
         }
 
-        .profile-card {
-            background: #FFFFFF;
-            border: 1px solid #E7ECE9;
-            border-radius: 16px;
-            overflow: hidden;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            color: var(--deep-green);
+            text-decoration: none;
+            font-size: 19px;
+            font-weight: 800;
+            letter-spacing: -0.7px;
         }
 
-        .profile-header {
-            background: #245B54;
-            color: #FFFFFF;
-            padding: 30px;
-        }
-
-        .profile-avatar {
-            width: 75px;
-            height: 75px;
-            border-radius: 50%;
-            background: #E5F0ED;
-            color: #245B54;
+        .brand-icon {
+            width: 38px;
+            height: 38px;
+            background: var(--soft-mint);
+            color: var(--deep-green);
+            border-radius: 11px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 30px;
+            font-size: 19px;
+        }
+
+        .topbar-label {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .main-content {
+            max-width: 1400px;
+            margin: auto;
+            padding: 42px 36px;
+        }
+
+        .breadcrumb-label {
+            color: var(--muted);
+            font-size: 11px;
             font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .page-title {
+            color: var(--deep-green);
+            font-size: 27px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .page-description {
+            color: var(--muted);
+            margin: 0;
+            line-height: 1.7;
+        }
+
+        .back-button {
+            border: 1px solid var(--border);
+            background: var(--white);
+            color: var(--deep-green);
+            padding: 11px 17px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+            transition: 0.2s ease;
+        }
+
+        .back-button:hover {
+            background: var(--soft-mint);
+            color: var(--deep-green);
+            border-color: #C9DED7;
+        }
+
+        .profile-card {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 17px;
+            overflow: hidden;
+            box-shadow: 0 4px 18px rgba(36, 91, 84, 0.035);
+        }
+
+        .profile-header {
+            background: var(--deep-green);
+            color: var(--white);
+            padding: 34px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-header::after {
+            content: "";
+            position: absolute;
+            width: 220px;
+            height: 220px;
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 50%;
+            right: -55px;
+            top: -115px;
+        }
+
+        .profile-header::before {
+            content: "";
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 50%;
+            right: 55px;
+            bottom: -105px;
+        }
+
+        .profile-header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .profile-avatar {
+            width: 76px;
+            height: 76px;
+            flex-shrink: 0;
+            border-radius: 50%;
+            background: var(--soft-mint);
+            color: var(--deep-green);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 29px;
+            font-weight: 800;
+            border: 4px solid rgba(255,255,255,0.18);
+        }
+
+        .profile-name {
+            font-size: 21px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 5px;
+        }
+
+        .profile-role {
+            color: rgba(255,255,255,0.75);
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.13);
+            border: 1px solid rgba(255,255,255,0.18);
+            color: var(--white);
+            border-radius: 30px;
+            padding: 6px 11px;
+            font-size: 11px;
+            font-weight: 600;
         }
 
         .profile-body {
-            padding: 30px;
+            padding: 32px;
         }
 
-        .info-label {
-            color: #718079;
+        .section-heading {
+            color: var(--deep-green);
+            font-size: 15px;
+            font-weight: 800;
+            margin-bottom: 5px;
+        }
+
+        .section-description {
+            color: var(--muted);
             font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 7px;
-        }
-
-        .info-value {
-            font-weight: 600;
-            color: #303C39;
-            margin-bottom: 0;
-            overflow-wrap: anywhere;
+            margin-bottom: 20px;
         }
 
         .info-item {
+            min-height: 91px;
             padding: 17px 0;
-            border-bottom: 1px solid #EEF1EF;
+            border-bottom: 1px solid #EEF2EF;
         }
 
-        .info-item:last-child {
-            border-bottom: none;
+        .info-label {
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 9px;
+        }
+
+        .info-value {
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 600;
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 11px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 700;
         }
 
         .status-active {
-            background: #DDF2E5;
-            color: #207044;
+            background: #E3F3E9;
+            color: #277347;
         }
 
         .status-inactive {
-            background: #F1E5E5;
-            color: #9A3636;
+            background: #F8E8E8;
+            color: #A33C3C;
+        }
+
+        .account-section {
+            border-top: 1px solid var(--border);
+            padding-top: 26px;
+            margin-top: 28px;
+        }
+
+        .account-info {
+            background: #FAFCFB;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 5px 18px;
+        }
+
+        .account-info .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .notice {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: #F2F7F5;
+            border: 1px solid #E0EBE6;
+            border-radius: 11px;
+            padding: 16px;
+            margin-top: 25px;
+        }
+
+        .notice-icon {
+            color: var(--primary);
+            font-size: 17px;
+        }
+
+        .notice p {
+            color: #61716A;
+            font-size: 12px;
+            line-height: 1.7;
+            margin: 0;
+        }
+
+        .page-footer {
+            color: #9AA59F;
+            font-size: 11px;
+            text-align: center;
+            padding: 25px 0 5px;
         }
 
         @media (max-width: 768px) {
 
+            .topbar-inner {
+                padding: 0 18px;
+            }
+
+            .topbar-label {
+                display: none;
+            }
+
             .main-content {
-                padding: 20px 14px;
+                padding: 30px 16px;
+            }
+
+            .page-title {
+                font-size: 23px;
+            }
+
+            .profile-header {
+                padding: 25px 21px;
             }
 
             .profile-body {
-                padding: 20px;
+                padding: 23px 20px;
+            }
+
+            .profile-avatar {
+                width: 65px;
+                height: 65px;
+                font-size: 25px;
+            }
+
+            .profile-name {
+                font-size: 18px;
             }
 
         }
@@ -165,264 +433,305 @@ $accountStatus = (int) $user['is_active'] === 1
 
 <body>
 
-<div class="container-fluid main-content">
+    <!-- Top Navigation -->
+    <header class="topbar">
 
-    <!-- Page Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div class="topbar-inner">
 
-        <div>
+            <a href="dashboard.php" class="brand">
 
-            <p class="text-secondary small mb-1">
-                IT PERSONNEL / ACCOUNT
-            </p>
+                <span class="brand-icon">
+                    <i class="bi bi-pc-display-horizontal"></i>
+                </span>
 
-            <h2 class="page-title mb-1">
-                My Profile
-            </h2>
+                LabSync
 
-            <p class="text-secondary mb-0">
-                View your PCare account information.
-            </p>
+            </a>
+
+            <span class="topbar-label">
+                IT PERSONNEL PORTAL
+            </span>
 
         </div>
 
-        <a href="dashboard.php" class="btn btn-outline-success">
-            <i class="bi bi-arrow-left me-1"></i>
-            Back to Dashboard
-        </a>
+    </header>
 
-    </div>
 
-    <!-- Profile Card -->
-    <div class="row">
+    <main class="main-content">
 
-        <div class="col-12 col-xl-8">
+        <!-- Page Heading -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
 
-            <div class="profile-card">
+            <div>
 
-                <!-- Profile Header -->
-                <div class="profile-header">
+                <p class="breadcrumb-label">
+                    IT Personnel / Account
+                </p>
 
-                    <div class="d-flex flex-wrap align-items-center gap-3">
+                <h1 class="page-title">
+                    My Profile
+                </h1>
 
-                        <div class="profile-avatar">
+                <p class="page-description">
+                    View your personal information and LabSync account details.
+                </p>
 
-                            <?= e(strtoupper(substr($user['full_name'], 0, 1))) ?>
+            </div>
+
+            <a href="dashboard.php" class="back-button">
+
+                <i class="bi bi-arrow-left me-2"></i>
+                Back to Dashboard
+
+            </a>
+
+        </div>
+
+
+        <!-- Profile Card -->
+        <div class="row">
+
+            <div class="col-12 col-xl-9">
+
+                <section class="profile-card">
+
+                    <!-- Profile Header -->
+                    <div class="profile-header">
+
+                        <div class="profile-header-content d-flex flex-wrap align-items-center gap-3">
+
+                            <div class="profile-avatar">
+                                <?= e($initial) ?>
+                            </div>
+
+                            <div>
+
+                                <h2 class="profile-name">
+                                    <?= e($user['full_name']) ?>
+                                </h2>
+
+                                <p class="profile-role">
+                                    IT Personnel
+                                </p>
+
+                                <span class="role-badge">
+
+                                    <i class="bi bi-shield-check"></i>
+
+                                    <?= e(ucfirst($user['role'])) ?> Account
+
+                                </span>
+
+                            </div>
 
                         </div>
 
-                        <div>
+                    </div>
 
-                            <h4 class="fw-bold mb-1">
-                                <?= e($user['full_name']) ?>
-                            </h4>
 
-                            <p class="mb-2 opacity-75">
-                                IT Personnel
-                            </p>
+                    <!-- Profile Body -->
+                    <div class="profile-body">
 
-                            <span class="badge rounded-pill bg-light text-success">
-                                <i class="bi bi-shield-check me-1"></i>
-                                <?= e(ucfirst($user['role'])) ?> Account
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+
+                            <div>
+
+                                <h3 class="section-heading">
+                                    Personal Information
+                                </h3>
+
+                                <p class="section-description">
+                                    Your registered account information.
+                                </p>
+
+                            </div>
+
+                            <span class="status-badge <?= (int) $user['is_active'] === 1 ? 'status-active' : 'status-inactive' ?>">
+
+                                <i class="bi bi-circle-fill" style="font-size: 7px;"></i>
+
+                                <?= e($accountStatus) ?> Account
+
                             </span>
 
                         </div>
 
-                    </div>
 
-                </div>
+                        <div class="row">
 
-                <!-- Profile Information -->
-                <div class="profile-body">
+                            <div class="col-12 col-md-6">
 
-                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="info-item">
 
-                        <h5 class="fw-bold mb-0">
-                            Personal Information
-                        </h5>
+                                    <p class="info-label">Full Name</p>
 
-                        <span class="badge rounded-pill <?= (int) $user['is_active'] === 1 ? 'status-active' : 'status-inactive' ?>">
-                            <?= e($accountStatus) ?> Account
-                        </span>
+                                    <p class="info-value">
+                                        <?= e($user['full_name']) ?>
+                                    </p>
 
-                    </div>
+                                </div>
 
-                    <div class="row">
+                            </div>
 
-                        <div class="col-12 col-md-6">
 
-                            <div class="info-item">
+                            <div class="col-12 col-md-6">
 
-                                <p class="info-label">
-                                    Full Name
-                                </p>
+                                <div class="info-item">
 
-                                <p class="info-value">
-                                    <?= e($user['full_name']) ?>
-                                </p>
+                                    <p class="info-label">Email Address</p>
+
+                                    <p class="info-value">
+                                        <?= e($user['email']) ?>
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="col-12 col-md-6">
+
+                                <div class="info-item">
+
+                                    <p class="info-label">ID Number</p>
+
+                                    <p class="info-value">
+                                        <?= !empty($user['id_number']) ? e($user['id_number']) : 'Not provided' ?>
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="col-12 col-md-6">
+
+                                <div class="info-item">
+
+                                    <p class="info-label">Department</p>
+
+                                    <p class="info-value">
+                                        <?= !empty($user['department']) ? e($user['department']) : 'Not provided' ?>
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="col-12 col-md-6">
+
+                                <div class="info-item">
+
+                                    <p class="info-label">Contact Number</p>
+
+                                    <p class="info-value">
+                                        <?= !empty($user['contact_no']) ? e($user['contact_no']) : 'Not provided' ?>
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="col-12 col-md-6">
+
+                                <div class="info-item">
+
+                                    <p class="info-label">Account Role</p>
+
+                                    <p class="info-value">
+                                        <?= e(ucfirst($user['role'])) ?>
+                                    </p>
+
+                                </div>
 
                             </div>
 
                         </div>
 
-                        <div class="col-12 col-md-6">
 
-                            <div class="info-item">
+                        <!-- Account Details -->
+                        <div class="account-section">
 
-                                <p class="info-label">
-                                    Email Address
-                                </p>
+                            <h3 class="section-heading">
+                                Account Details
+                            </h3>
 
-                                <p class="info-value">
-                                    <?= e($user['email']) ?>
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-12 col-md-6">
-
-                            <div class="info-item">
-
-                                <p class="info-label">
-                                    ID Number
-                                </p>
-
-                                <p class="info-value">
-                                    <?= !empty($user['id_number']) ? e($user['id_number']) : 'Not provided' ?>
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-12 col-md-6">
-
-                            <div class="info-item">
-
-                                <p class="info-label">
-                                    Department
-                                </p>
-
-                                <p class="info-value">
-                                    <?= !empty($user['department']) ? e($user['department']) : 'Not provided' ?>
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-12 col-md-6">
-
-                            <div class="info-item">
-
-                                <p class="info-label">
-                                    Contact Number
-                                </p>
-
-                                <p class="info-value">
-                                    <?= !empty($user['contact_no']) ? e($user['contact_no']) : 'Not provided' ?>
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div class="col-12 col-md-6">
-
-                            <div class="info-item">
-
-                                <p class="info-label">
-                                    Account Role
-                                </p>
-
-                                <p class="info-value">
-                                    <?= e(ucfirst($user['role'])) ?>
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    <!-- Account Details -->
-                    <div class="border-top pt-4 mt-4">
-
-                        <h5 class="fw-bold mb-3">
-                            Account Details
-                        </h5>
-
-                        <div class="info-item">
-
-                            <p class="info-label">
-                                User ID
+                            <p class="section-description">
+                                Additional information about your account.
                             </p>
 
-                            <p class="info-value">
-                                #<?= (int) $user['user_id'] ?>
-                            </p>
+
+                            <div class="account-info">
+
+                                <div class="info-item">
+
+                                    <p class="info-label">User ID</p>
+
+                                    <p class="info-value">
+                                        #<?= (int) $user['user_id'] ?>
+                                    </p>
+
+                                </div>
+
+
+                                <div class="info-item">
+
+                                    <p class="info-label">Account Created</p>
+
+                                    <p class="info-value">
+                                        <?= e($createdDate) ?>
+                                    </p>
+
+                                </div>
+
+
+                                <div class="info-item">
+
+                                    <p class="info-label">Account Status</p>
+
+                                    <p class="info-value">
+                                        <?= e($accountStatus) ?>
+                                    </p>
+
+                                </div>
+
+                            </div>
 
                         </div>
 
-                        <div class="info-item">
 
-                            <p class="info-label">
-                                Account Created
-                            </p>
+                        <!-- Information Notice -->
+                        <div class="notice">
 
-                            <p class="info-value">
+                            <i class="bi bi-info-circle notice-icon"></i>
 
-                                <?= $user['created_at']
-                                    ? e(date('F d, Y', strtotime($user['created_at'])))
-                                    : 'Not available'
-                                ?>
-
-                            </p>
-
-                        </div>
-
-                        <div class="info-item">
-
-                            <p class="info-label">
-                                Account Status
-                            </p>
-
-                            <p class="info-value">
-                                <?= e($accountStatus) ?>
+                            <p>
+                                Your account information is currently view-only.
+                                If any information needs correction, please contact
+                                the system administrator.
                             </p>
 
                         </div>
 
                     </div>
 
-                    <div class="alert alert-light border mt-4 mb-0">
-
-                        <i class="bi bi-info-circle me-2 text-success"></i>
-
-                        Your account information is currently view-only.
-                        Contact the system administrator if your information needs correction.
-
-                    </div>
-
-                </div>
+                </section>
 
             </div>
 
         </div>
 
-    </div>
 
-    <div class="text-center mt-4">
+        <!-- Footer -->
+        <footer class="page-footer">
 
-        <small class="text-secondary">
-            PCare · B204 Computer Laboratory
-        </small>
+            LabSync · Computer Laboratories · SLSU Lucena Campus
 
-    </div>
+        </footer>
 
-</div>
+    </main>
 
 </body>
 </html>
