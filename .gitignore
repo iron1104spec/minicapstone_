@@ -1,0 +1,18 @@
+# Protect local database credentials
+/config/db.php
+
+# Exclude uploaded issue photos
+/uploads/
+
+# Exclude temporary test files
+/test_db.php
+/test_auth.php
+/test_logout.php
+/test_db_folder/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Exclude unrelated project
+/Iron/
