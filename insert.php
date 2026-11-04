@@ -1,25 +1,28 @@
 
 <?php
-/*
-|--------------------------------------------------------------------------
-| LABSYNC REGISTRATION
-|--------------------------------------------------------------------------
-| Public registration creates Student accounts only.
-*/
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/config/db.php';
 
-// Automatic redirect removed so the registration page remains accessible.
-
-$successMessage = flash_get('success');
 $errors = [];
+
+$fullName = '';
+$email = '';
+$idNumber = '';
+$department = '';
+$contactNo = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!csrf_verify($_POST['csrf_token'] ?? null)) {
-        $errors['form'] = 'Your session expired. Please try again.';
+
+        $errors['form'] = 'Your session may have expired. Please refresh and try again.';
+
     } else {
 
         $fullName = trim((string) ($_POST['full_name'] ?? ''));
@@ -30,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $password = (string) ($_POST['password'] ?? '');
         $confirm = (string) ($_POST['confirm_password'] ?? '');
+
+        // INPUT VALIDATION
 
         if (mb_strlen($fullName) < 2 || mb_strlen($fullName) > 150) {
             $errors['full_name'] = 'Enter your full name (2 to 150 characters).';
@@ -63,10 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors['confirm_password'] = 'Passwords do not match.';
         }
 
-        if (!$errors) {
+        // DATABASE REGISTRATION
+
+        if (empty($errors)) {
+
             try {
+
                 $pdo = db();
 
+                // Check duplicate email and ID number.
                 $check = $pdo->prepare(
                     'SELECT email, id_number
                      FROM users
@@ -79,7 +89,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':id_number' => $idNumber
                 ]);
 
-                foreach ($check->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $existingUsers = $check->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($existingUsers as $row) {
+
                     if (strtolower((string) $row['email']) === $email) {
                         $errors['email'] = 'This email address is already registered.';
                     }
@@ -89,7 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                if (!$errors) {
+                // Create account if no duplicate exists.
+                if (empty($errors)) {
+
                     $insert = $pdo->prepare(
                         'INSERT INTO users (
                             full_name,
@@ -123,41 +138,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':is_active' => 1
                     ]);
 
-                    flash_set(
-                        'success',
-                        'Account created successfully! You can now sign in.'
-                    );
+                    // Get the newly created account ID.
+                    $newUserId = (int) $pdo->lastInsertId();
 
-                    redirect('insert.php');
+                    // Automatically log in the new student.
+                    session_regenerate_id(true);
+
+                    $_SESSION['user_id'] = $newUserId;
+                    $_SESSION['full_name'] = $fullName;
+                    $_SESSION['email'] = $email;
+                    $_SESSION['role'] = 'student';
+
+                    unset($_SESSION['registration_completed']);
+
+                    // Redirect to Student Dashboard.
+                    redirect('student/dashboard.php');
                 }
 
             } catch (PDOException $ex) {
+
                 error_log('LabSync registration error: ' . $ex->getMessage());
+
                 $errors['form'] = 'We could not create your account right now. Please try again.';
             }
         }
     }
 }
 
+// FIELD ERROR DISPLAY
+
 function field_error(array $errors, string $key): void
 {
     if (isset($errors[$key])) {
-        echo '<p class="field-error" id="err-' . e($key) . '">'
+        echo '<p class="auth-field-error">'
             . '<i class="bi bi-exclamation-circle"></i> '
             . e($errors[$key])
             . '</p>';
     }
 }
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <meta name="description"
-          content="Create your LabSync account to report and track computer issues at SLSU Lucena Campus.">
+        content="Create your LabSync account to report and track computer issues at SLSU Lucena Campus.">
 
     <title>Create Account | LabSync</title>
 
@@ -165,258 +196,300 @@ function field_error(array $errors, string $key): void
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet">
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+        rel="stylesheet">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-          rel="stylesheet">
+        rel="stylesheet">
 
-    <link rel="stylesheet" href="assets/css/style.css?v=4">
-    <link rel="stylesheet" href="assets/css/auth.css?v=4">
+    <!-- Updated CSS versions -->
+    <link rel="stylesheet" href="assets/style.css?v=13">
+    <link rel="stylesheet" href="assets/css/auth.css?v=13">
+
 </head>
 
-<body class="page-auth">
+<body class="auth-screen auth-register">
 
-<div class="auth-page">
+    <main class="auth-layout">
 
-    <header class="auth-topbar">
-        <a href="index.php" class="auth-brand">
-            <span class="auth-brand-icon">
+        <a href="index.php" class="auth-logo" aria-label="LabSync homepage">
+
+            <span class="auth-logo-icon">
                 <i class="bi bi-pc-display-horizontal"></i>
             </span>
-            <span>LabSync</span>
+
+            <span class="auth-logo-name">LabSync<span>.</span></span>
+
         </a>
 
-        <div class="auth-campus-label">
-            SLSU LUCENA CAMPUS
-        </div>
-    </header>
+        <section class="auth-card auth-register-card" aria-labelledby="register-title">
 
-    <main class="auth-stage">
+            <div class="auth-card-heading">
 
-        <section class="auth-shell">
+                <div class="auth-card-symbol">
+                    <i class="bi bi-person-plus"></i>
+                </div>
 
-            <aside class="auth-visual">
-                <div class="auth-visual-image"></div>
-                <div class="auth-visual-shade"></div>
+                <span class="auth-kicker">GET STARTED WITH LABSYNC</span>
 
-                <div class="auth-visual-content">
+                <h1 id="register-title">Create your account</h1>
 
-                    <span class="auth-eyebrow">
-                        <span class="auth-eyebrow-dot"></span>
-                        COMPUTER LABORATORY SUPPORT
-                    </span>
+                <p>Register to report and monitor computer issues.</p>
 
-                    <div class="auth-welcome">
-                        <span>Welcome to</span>
-                        <h1>LabSync<span>.</span></h1>
-                        <p>
-                            Report problems.<br>
-                            Follow the fix.
-                        </p>
-                    </div>
+            </div>
 
-                    <div class="auth-visual-bottom">
-                        <div class="auth-visual-line"></div>
-                        <p>
-                            A centralized platform for computer issue
-                            reporting and maintenance tracking.
-                        </p>
+            <nav class="auth-tabs" aria-label="Account access">
+
+                <a href="login.php" class="auth-tab">
+                    Sign In
+                </a>
+
+                <a href="insert.php"
+                    class="auth-tab active"
+                    aria-current="page">
+                    Sign Up
+                </a>
+
+            </nav>
+
+            <?php if (isset($errors['form'])): ?>
+
+                <div class="auth-message auth-message-error" role="alert">
+
+                    <i class="bi bi-exclamation-circle-fill"></i>
+
+                    <div>
+                        <p><?= e($errors['form']) ?></p>
                     </div>
 
                 </div>
-            </aside>
 
-            <section class="auth-form-panel">
+            <?php endif; ?>
 
-                <div class="auth-tabs">
-                    <a href="login.php" class="auth-tab">
-                        Sign In
-                    </a>
+            <form method="POST"
+                action="insert.php"
+                class="auth-form auth-register-form"
+                data-once>
 
-                    <a href="insert.php" class="auth-tab active" aria-current="page">
-                        Sign Up
-                    </a>
-                </div>
+                <?= csrf_field() ?>
 
-                <div class="auth-form-heading">
-                    <span class="auth-kicker">GET STARTED WITH LABSYNC</span>
-                    <h2>Create your account</h2>
-                    <p>
-                        Join LabSync to report and monitor computer issues.
-                    </p>
-                </div>
+                <div class="auth-fields-grid">
 
-                <?php if ($successMessage): ?>
-                    <div class="auth-alert auth-alert-success" role="alert">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span><?= e($successMessage) ?></span>
-                    </div>
-                <?php endif; ?>
+                    <!-- FULL NAME -->
+                    <div class="auth-field auth-field-full">
 
-                <?php if (isset($errors['form'])): ?>
-                    <div class="auth-alert auth-alert-danger" role="alert">
-                        <i class="bi bi-exclamation-circle-fill"></i>
-                        <span><?= e($errors['form']) ?></span>
-                    </div>
-                <?php endif; ?>
+                        <label for="full_name">Full Name</label>
 
-                <form method="POST" action="insert.php" class="auth-register-form" data-once>
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-person"></i>
 
-                    <?= csrf_field() ?>
-
-                    <div class="auth-fields-grid">
-
-                        <div class="auth-field auth-field-full">
-                            <label for="full_name">Full Name</label>
-                            <div class="auth-input-wrap<?= isset($errors['full_name']) ? ' has-error' : '' ?>">
-                                <i class="bi bi-person"></i>
-                                <input type="text" id="full_name" name="full_name"
-                                       value="<?= old('full_name') ?>"
-                                       maxlength="150" autocomplete="name"
-                                       placeholder="Enter your full name" required>
-                            </div>
-                            <?php field_error($errors, 'full_name'); ?>
+                            <input
+                                type="text"
+                                id="full_name"
+                                name="full_name"
+                                value="<?= e($fullName) ?>"
+                                maxlength="150"
+                                autocomplete="name"
+                                placeholder="Enter your full name"
+                                required
+                            >
                         </div>
 
-                        <div class="auth-field auth-field-full">
-                            <label for="email">Email Address</label>
-                            <div class="auth-input-wrap<?= isset($errors['email']) ? ' has-error' : '' ?>">
-                                <i class="bi bi-envelope"></i>
-                                <input type="email" id="email" name="email"
-                                       value="<?= old('email') ?>"
-                                       maxlength="150" autocomplete="email"
-                                       placeholder="name@example.com" required>
-                            </div>
-                            <?php field_error($errors, 'email'); ?>
-                        </div>
-
-                        <div class="auth-field">
-                            <label for="id_number">ID Number</label>
-                            <div class="auth-input-wrap<?= isset($errors['id_number']) ? ' has-error' : '' ?>">
-                                <i class="bi bi-person-vcard"></i>
-                                <input type="text" id="id_number" name="id_number"
-                                       value="<?= old('id_number') ?>"
-                                       maxlength="50" placeholder="Your ID number" required>
-                            </div>
-                            <?php field_error($errors, 'id_number'); ?>
-                        </div>
-
-                        <div class="auth-field">
-                            <label for="contact_no">Contact Number</label>
-                            <div class="auth-input-wrap<?= isset($errors['contact_no']) ? ' has-error' : '' ?>">
-                                <i class="bi bi-telephone"></i>
-                                <input type="tel" id="contact_no" name="contact_no"
-                                       value="<?= old('contact_no') ?>"
-                                       maxlength="30" autocomplete="tel"
-                                       placeholder="09XX XXX XXXX" required>
-                            </div>
-                            <?php field_error($errors, 'contact_no'); ?>
-                        </div>
-
-                        <div class="auth-field auth-field-full">
-                            <label for="department">Department</label>
-                            <div class="auth-input-wrap<?= isset($errors['department']) ? ' has-error' : '' ?>">
-                                <i class="bi bi-building"></i>
-                                <input type="text" id="department" name="department"
-                                       value="<?= old('department') ?>"
-                                       maxlength="100" placeholder="Enter your department" required>
-                            </div>
-                            <?php field_error($errors, 'department'); ?>
-                        </div>
-
-                        <div class="auth-field">
-                            <label for="password">Password</label>
-                            <div class="auth-input-wrap<?= isset($errors['password']) ? ' has-error' : '' ?>">
-                                <i class="bi bi-lock"></i>
-                                <input type="password" id="password" name="password"
-                                       autocomplete="new-password"
-                                       placeholder="Create password" required>
-                                <button type="button" class="auth-password-toggle"
-                                        data-toggle-password="password"
-                                        aria-label="Show password">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </div>
-                            <?php field_error($errors, 'password'); ?>
-                        </div>
-
-                        <div class="auth-field">
-                            <label for="confirm_password">Confirm Password</label>
-                            <div class="auth-input-wrap<?= isset($errors['confirm_password']) ? ' has-error' : '' ?>">
-                                <i class="bi bi-lock-fill"></i>
-                                <input type="password" id="confirm_password"
-                                       name="confirm_password" autocomplete="new-password"
-                                       placeholder="Repeat password" required>
-                                <button type="button" class="auth-password-toggle"
-                                        data-toggle-password="confirm_password"
-                                        aria-label="Show password">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                            </div>
-                            <?php field_error($errors, 'confirm_password'); ?>
-                        </div>
+                        <?php field_error($errors, 'full_name'); ?>
 
                     </div>
 
-                    <button type="submit" class="auth-submit">
-                        <span>Create Account</span>
-                        <i class="bi bi-arrow-right"></i>
-                    </button>
+                    <!-- EMAIL -->
+                    <div class="auth-field auth-field-full">
 
-                </form>
+                        <label for="email">Email Address</label>
 
-                <div class="auth-switch">
-                    Already have an account?
-                    <a href="login.php">Sign In</a>
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-envelope"></i>
+
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                value="<?= e($email) ?>"
+                                maxlength="150"
+                                autocomplete="email"
+                                placeholder="name@example.com"
+                                required
+                            >
+                        </div>
+
+                        <?php field_error($errors, 'email'); ?>
+
+                    </div>
+
+                    <!-- ID NUMBER -->
+                    <div class="auth-field">
+
+                        <label for="id_number">ID Number</label>
+
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-person-vcard"></i>
+
+                            <input
+                                type="text"
+                                id="id_number"
+                                name="id_number"
+                                value="<?= e($idNumber) ?>"
+                                maxlength="50"
+                                placeholder="Your ID number"
+                                required
+                            >
+                        </div>
+
+                        <?php field_error($errors, 'id_number'); ?>
+
+                    </div>
+
+                    <!-- CONTACT NUMBER -->
+                    <div class="auth-field">
+
+                        <label for="contact_no">Contact Number</label>
+
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-telephone"></i>
+
+                            <input
+                                type="tel"
+                                id="contact_no"
+                                name="contact_no"
+                                value="<?= e($contactNo) ?>"
+                                maxlength="30"
+                                autocomplete="tel"
+                                placeholder="09XX XXX XXXX"
+                                required
+                            >
+                        </div>
+
+                        <?php field_error($errors, 'contact_no'); ?>
+
+                    </div>
+
+                    <!-- DEPARTMENT -->
+                    <div class="auth-field auth-field-full">
+
+                        <label for="department">Department</label>
+
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-building"></i>
+
+                            <input
+                                type="text"
+                                id="department"
+                                name="department"
+                                value="<?= e($department) ?>"
+                                maxlength="100"
+                                placeholder="Enter your department"
+                                required
+                            >
+                        </div>
+
+                        <?php field_error($errors, 'department'); ?>
+
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div class="auth-field">
+
+                        <label for="password">Password</label>
+
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-lock"></i>
+
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                autocomplete="new-password"
+                                placeholder="Create password"
+                                required
+                            >
+
+                            <button
+                                type="button"
+                                class="auth-password-toggle"
+                                data-toggle-password="password"
+                                aria-label="Show password"
+                            >
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+
+                        <?php field_error($errors, 'password'); ?>
+
+                    </div>
+
+                    <!-- CONFIRM PASSWORD -->
+                    <div class="auth-field">
+
+                        <label for="confirm_password">Confirm Password</label>
+
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-lock-fill"></i>
+
+                            <input
+                                type="password"
+                                id="confirm_password"
+                                name="confirm_password"
+                                autocomplete="new-password"
+                                placeholder="Repeat password"
+                                required
+                            >
+
+                            <button
+                                type="button"
+                                class="auth-password-toggle"
+                                data-toggle-password="confirm_password"
+                                aria-label="Show password"
+                            >
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+
+                        <?php field_error($errors, 'confirm_password'); ?>
+
+                    </div>
+
                 </div>
 
-                <p class="auth-disclaimer">
-                    LabSync is an academic mini-capstone project and is not an official SLSU system.
-                </p>
+                <button type="submit" class="auth-submit">
 
-            </section>
+                    <span>Create Account</span>
+
+                    <i class="bi bi-arrow-right"></i>
+
+                </button>
+
+            </form>
+
+            <p class="auth-switch">
+                Already have an account?
+                <a href="login.php">Sign In</a>
+            </p>
+
+            <div class="auth-card-footer">
+
+                <span class="auth-footer-line"></span>
+
+                <p>LABSYNC · SLSU LUCENA CAMPUS</p>
+
+                <span class="auth-footer-line"></span>
+
+            </div>
 
         </section>
 
+        <p class="auth-disclaimer">
+            LabSync is an academic mini-capstone project and is not an official SLSU system.
+        </p>
+
     </main>
 
-</div>
-
-<script src="script.js" defer></script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    document.querySelectorAll('[data-toggle-password]').forEach(function (button) {
-        button.addEventListener('click', function () {
-            const input = document.getElementById(
-                button.getAttribute('data-toggle-password')
-            );
-
-            const icon = button.querySelector('i');
-
-            if (!input) return;
-
-            const showing = input.type === 'text';
-            input.type = showing ? 'password' : 'text';
-
-            if (icon) {
-                icon.classList.toggle('bi-eye', showing);
-                icon.classList.toggle('bi-eye-slash', !showing);
-            }
-
-            button.setAttribute(
-                'aria-label',
-                showing ? 'Show password' : 'Hide password'
-            );
-        });
-    });
-
-});
-</script>
+    <script src="assets/js/main.js" defer></script>
 
 </body>
 </html>

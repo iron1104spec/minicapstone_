@@ -1,7 +1,6 @@
-
 /* ============================================================
-   PCARE - MASTER JAVASCRIPT
-   Version 2.0
+   LABSYNC - MASTER JAVASCRIPT
+   Version 2.1
 
    Vanilla JavaScript
    No external JavaScript dependencies
@@ -29,7 +28,6 @@
 
     /* ========================================================
        02. PUBLIC NAVIGATION
-       Compatible with the latest PCare index.php
     ======================================================== */
 
     function initPublicNav() {
@@ -40,12 +38,10 @@
 
         if (!navbar || !siteNav) return;
 
-        // Give navigation a unique ID
         if (!siteNav.id) {
             siteNav.id = 'siteNav';
         }
 
-        // Create mobile toggle automatically if missing
         var navToggle = document.getElementById('navToggle');
 
         if (!navToggle) {
@@ -55,7 +51,6 @@
             navToggle.type = 'button';
             navToggle.id = 'navToggle';
             navToggle.className = 'nav-toggle';
-
             navToggle.textContent = '☰';
 
             navToggle.setAttribute('aria-label', 'Open navigation');
@@ -85,12 +80,9 @@
             navToggle.textContent = '☰';
         }
 
-        // Toggle menu
         navToggle.addEventListener('click', function () {
 
-            var isOpen = navbar.classList.contains('nav-open');
-
-            if (isOpen) {
+            if (navbar.classList.contains('nav-open')) {
                 closeNavigation();
             } else {
                 openNavigation();
@@ -98,25 +90,18 @@
 
         });
 
-        // Close menu after selecting navigation links
         $$('.nav-links a', navbar).forEach(function (link) {
-
             link.addEventListener('click', closeNavigation);
-
         });
 
-        // Close menu after clicking Sign In or Register
         if (navActions) {
 
             $$('a', navActions).forEach(function (link) {
-
                 link.addEventListener('click', closeNavigation);
-
             });
 
         }
 
-        // Close when clicking outside navigation
         document.addEventListener('click', function (event) {
 
             if (
@@ -128,7 +113,6 @@
 
         });
 
-        // Close using Escape
         document.addEventListener('keydown', function (event) {
 
             if (event.key === 'Escape') {
@@ -137,7 +121,6 @@
 
         });
 
-        // Close menu when returning to desktop
         window.addEventListener('resize', function () {
 
             if (window.innerWidth > 991) {
@@ -151,7 +134,6 @@
 
     /* ========================================================
        03. DASHBOARD SIDEBAR
-       Future Student, IT Personnel and Admin dashboards
     ======================================================== */
 
     function initSidebar() {
@@ -161,14 +143,17 @@
 
         if (!sidebarToggle || !sidebar) return;
 
-        // Create backdrop
-        var backdrop = document.createElement('div');
+        var backdrop = document.querySelector('.sidebar-backdrop');
 
-        backdrop.className = 'sidebar-backdrop';
+        if (!backdrop) {
 
-        backdrop.setAttribute('aria-hidden', 'true');
+            backdrop = document.createElement('div');
 
-        document.body.appendChild(backdrop);
+            backdrop.className = 'sidebar-backdrop';
+            backdrop.setAttribute('aria-hidden', 'true');
+
+            document.body.appendChild(backdrop);
+        }
 
         function openSidebar() {
 
@@ -176,7 +161,6 @@
             backdrop.classList.add('active');
 
             sidebarToggle.setAttribute('aria-expanded', 'true');
-
         }
 
         function closeSidebar() {
@@ -185,14 +169,11 @@
             backdrop.classList.remove('active');
 
             sidebarToggle.setAttribute('aria-expanded', 'false');
-
         }
 
         sidebarToggle.addEventListener('click', function () {
 
-            var isOpen = sidebar.classList.contains('open');
-
-            if (isOpen) {
+            if (sidebar.classList.contains('open')) {
                 closeSidebar();
             } else {
                 openSidebar();
@@ -234,8 +215,93 @@
 
 
     /* ========================================================
-       04. CONFIRMATION DIALOGS
-       Add data-confirm to buttons or links
+       04. PASSWORD VISIBILITY TOGGLE
+       Supports:
+       data-toggle-password="password"
+       data-toggle-password="confirm_password"
+    ======================================================== */
+
+    function initPasswordToggles() {
+
+        $$('[data-toggle-password]').forEach(function (button) {
+
+            button.addEventListener('click', function () {
+
+                var inputId = button.getAttribute('data-toggle-password');
+                var input = document.getElementById(inputId);
+
+                if (!input) return;
+
+                var icon = button.querySelector('i');
+                var isPassword = input.type === 'password';
+
+                input.type = isPassword ? 'text' : 'password';
+
+                button.setAttribute(
+                    'aria-label',
+                    isPassword ? 'Hide password' : 'Show password'
+                );
+
+                if (icon) {
+
+                    icon.classList.toggle('bi-eye', !isPassword);
+                    icon.classList.toggle('bi-eye-slash', isPassword);
+
+                }
+
+            });
+
+        });
+
+    }
+
+
+    /* ========================================================
+       05. LIVE PASSWORD MATCH VALIDATION
+       Registration page only
+    ======================================================== */
+
+    function initPasswordMatch() {
+
+        var password = document.getElementById('password');
+        var confirmPassword = document.getElementById('confirm_password');
+
+        if (!password || !confirmPassword) return;
+
+        function checkPasswordMatch() {
+
+            if (!confirmPassword.value) {
+
+                confirmPassword.setCustomValidity('');
+                return;
+
+            }
+
+            if (password.value !== confirmPassword.value) {
+
+                confirmPassword.setCustomValidity(
+                    'Passwords do not match.'
+                );
+
+            } else {
+
+                confirmPassword.setCustomValidity('');
+
+            }
+
+        }
+
+        password.addEventListener('input', checkPasswordMatch);
+        confirmPassword.addEventListener('input', checkPasswordMatch);
+
+        // Also check if the browser restores previously entered values.
+        checkPasswordMatch();
+
+    }
+
+
+    /* ========================================================
+       06. CONFIRMATION DIALOGS
     ======================================================== */
 
     function initConfirmations() {
@@ -250,9 +316,7 @@
                     message = 'Are you sure you want to continue?';
                 }
 
-                var confirmed = window.confirm(message);
-
-                if (!confirmed) {
+                if (!window.confirm(message)) {
 
                     event.preventDefault();
                     event.stopPropagation();
@@ -267,8 +331,7 @@
 
 
     /* ========================================================
-       05. AUTO-DISMISS ALERTS
-       Supports success and error notifications
+       07. AUTO-DISMISS ALERTS
     ======================================================== */
 
     function initFlashAutoDismiss() {
@@ -304,19 +367,7 @@
 
 
     /* ========================================================
-       06. IMAGE PREVIEW AND FILE SIZE VALIDATION
-
-       Example HTML:
-
-       <input
-           type="file"
-           accept="image/jpeg,image/png,image/webp"
-           data-preview="imagePreview"
-           data-max-bytes="3145728"
-       >
-
-       <div id="imagePreview"></div>
-
+       08. IMAGE PREVIEW AND FILE SIZE VALIDATION
     ======================================================== */
 
     function initFilePreview() {
@@ -341,13 +392,11 @@
 
                 if (!file) return;
 
-                // File size validation
                 if (maxBytes > 0 && file.size > maxBytes) {
 
                     var error = document.createElement('p');
 
                     error.className = 'form-hint';
-
                     error.style.color = 'var(--danger)';
 
                     error.textContent =
@@ -362,13 +411,11 @@
                     return;
                 }
 
-                // Image type validation
                 if (!file.type || file.type.indexOf('image/') !== 0) {
 
                     var typeError = document.createElement('p');
 
                     typeError.className = 'form-hint';
-
                     typeError.style.color = 'var(--danger)';
 
                     typeError.textContent =
@@ -381,7 +428,6 @@
                     return;
                 }
 
-                // Generate image preview
                 var reader = new FileReader();
 
                 reader.onload = function (event) {
@@ -421,17 +467,7 @@
 
 
     /* ========================================================
-       07. CHARACTER COUNTER
-
-       Example HTML:
-
-       <textarea
-           maxlength="1000"
-           data-counter="descriptionCount">
-       </textarea>
-
-       <span id="descriptionCount"></span>
-
+       09. CHARACTER COUNTER
     ======================================================== */
 
     function initCharacterCounters() {
@@ -474,21 +510,7 @@
 
 
     /* ========================================================
-       08. LIVE SEARCH AND TABLE FILTER
-
-       Example HTML:
-
-       <input
-           type="search"
-           data-live-filter="#reportsTable"
-       >
-
-       <table id="reportsTable">
-           <tbody>
-               <tr>...</tr>
-           </tbody>
-       </table>
-
+       10. LIVE SEARCH AND TABLE FILTER
     ======================================================== */
 
     function initLiveFilter() {
@@ -531,7 +553,7 @@
 
 
     /* ========================================================
-       09. PREVENT DOUBLE FORM SUBMISSION
+       11. PREVENT DOUBLE FORM SUBMISSION
     ======================================================== */
 
     function initDoubleSubmitGuard() {
@@ -568,7 +590,6 @@
                         ? submitter.value
                         : submitter.textContent;
 
-                // Disable after form submission begins
                 window.setTimeout(function () {
 
                     submitter.disabled = true;
@@ -593,18 +614,7 @@
 
 
     /* ========================================================
-       10. DROPDOWN HANDLER
-
-       Example HTML:
-
-       <button data-dropdown="profileMenu">
-           Profile
-       </button>
-
-       <div id="profileMenu">
-           ...
-       </div>
-
+       12. DROPDOWN HANDLER
     ======================================================== */
 
     function initOutsideClickClose() {
@@ -642,7 +652,6 @@
 
             });
 
-            // Close dropdown when clicking outside
             document.addEventListener('click', function (event) {
 
                 if (
@@ -654,7 +663,6 @@
 
             });
 
-            // Close dropdown with Escape
             document.addEventListener('keydown', function (event) {
 
                 if (event.key === 'Escape') {
@@ -669,13 +677,17 @@
 
 
     /* ========================================================
-       11. INITIALIZE ALL MODULES
+       13. INITIALIZE ALL MODULES
     ======================================================== */
 
-    function initializePCare() {
+    function initializeLabSync() {
 
         initPublicNav();
         initSidebar();
+
+        initPasswordToggles();
+        initPasswordMatch();
+
         initConfirmations();
         initFlashAutoDismiss();
         initFilePreview();
@@ -684,22 +696,25 @@
         initDoubleSubmitGuard();
         initOutsideClickClose();
 
-        console.log('PCare JavaScript initialized successfully.');
+        console.log('LabSync JavaScript initialized successfully.');
 
     }
 
 
-    // Wait for HTML to finish loading
+    /* ========================================================
+       14. START AFTER HTML LOADS
+    ======================================================== */
+
     if (document.readyState === 'loading') {
 
         document.addEventListener(
             'DOMContentLoaded',
-            initializePCare
+            initializeLabSync
         );
 
     } else {
 
-        initializePCare();
+        initializeLabSync();
 
     }
 
