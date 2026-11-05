@@ -10,13 +10,16 @@ require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/config/db.php';
 
 $errors = [];
+$successMessage = '';
 
 $fullName = '';
 $email = '';
 $idNumber = '';
 $department = '';
 $contactNo = '';
+$role = '';
 
+// PROCESS REGISTRATION
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!csrf_verify($_POST['csrf_token'] ?? null)) {
@@ -30,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $idNumber = trim((string) ($_POST['id_number'] ?? ''));
         $department = trim((string) ($_POST['department'] ?? ''));
         $contactNo = trim((string) ($_POST['contact_no'] ?? ''));
+        $role = trim((string) ($_POST['role'] ?? ''));
 
         $password = (string) ($_POST['password'] ?? '');
         $confirm = (string) ($_POST['confirm_password'] ?? '');
@@ -54,6 +58,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!preg_match('/^[0-9+\-\s()]{7,30}$/', $contactNo)) {
             $errors['contact_no'] = 'Enter a valid contact number.';
+        }
+
+        // Only these roles are recognized by the registration form.
+        $allowedRoles = ['student', 'personnel', 'admin'];
+
+        if (!in_array($role, $allowedRoles, true)) {
+            $errors['role'] = 'Please select a valid account role.';
+        }
+
+        // Public registration cannot create administrator accounts.
+        if ($role === 'admin') {
+            $errors['role'] = 'Administrator accounts must be created through a controlled setup process.';
         }
 
         if (
@@ -105,6 +121,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Create account if no duplicate exists.
                 if (empty($errors)) {
 
+                    // Students are active immediately.
+                    // IT Personnel accounts require administrator approval.
+                    $isActive = ($role === 'student') ? 1 : 0;
+
                     $insert = $pdo->prepare(
                         'INSERT INTO users (
                             full_name,
@@ -131,33 +151,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':full_name' => $fullName,
                         ':email' => $email,
                         ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
-                        ':role' => 'student',
+                        ':role' => $role,
                         ':id_number' => $idNumber,
                         ':department' => $department,
                         ':contact_no' => $contactNo,
-                        ':is_active' => 1
+                        ':is_active' => $isActive
                     ]);
 
                     // Get the newly created account ID.
                     $newUserId = (int) $pdo->lastInsertId();
 
-                    // Automatically log in the new student.
-                    session_regenerate_id(true);
+                    if ($role === 'student') {
 
-                    $_SESSION['user_id'] = $newUserId;
-                    $_SESSION['full_name'] = $fullName;
-                    $_SESSION['email'] = $email;
-                    $_SESSION['role'] = 'student';
+                        // Automatically log in the active student.
+                        session_regenerate_id(true);
 
-                    unset($_SESSION['registration_completed']);
+                        $_SESSION['user_id'] = $newUserId;
+                        $_SESSION['full_name'] = $fullName;
+                        $_SESSION['email'] = $email;
+                        $_SESSION['role'] = 'student';
 
-                    // Redirect to Student Dashboard.
-                    redirect('student/dashboard.php');
+                        unset($_SESSION['registration_completed']);
+
+                        redirect('student/dashboard.php');
+
+                    } elseif ($role === 'personnel') {
+
+                        // IT Personnel must wait for administrator approval.
+                        $successMessage = 'Your IT Personnel account has been submitted successfully. Please wait for administrator approval before signing in.';
+
+                        // Clear submitted form values after successful registration.
+                        $fullName = '';
+                        $email = '';
+                        $idNumber = '';
+                        $department = '';
+                        $contactNo = '';
+                        $role = '';
+                    }
                 }
 
             } catch (PDOException $ex) {
 
-                error_log('LabSync registration error: ' . $ex->getMessage());
+                error_log('PCare registration error: ' . $ex->getMessage());
 
                 $errors['form'] = 'We could not create your account right now. Please try again.';
             }
@@ -166,7 +201,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // FIELD ERROR DISPLAY
-
 function field_error(array $errors, string $key): void
 {
     if (isset($errors[$key])) {
@@ -188,7 +222,7 @@ function field_error(array $errors, string $key): void
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <meta name="description"
-        content="Create your LabSync account to report and track computer issues at SLSU Lucena Campus.">
+        content="Create your account to report and track computer issues at SLSU Lucena Campus.">
 
     <title>Create Account | LabSync</title>
 
@@ -201,9 +235,8 @@ function field_error(array $errors, string $key): void
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
         rel="stylesheet">
 
-    <!-- Updated CSS versions -->
     <link rel="stylesheet" href="assets/style.css?v=13">
-    <link rel="stylesheet" href="assets/css/auth.css?v=13">
+    <link rel="stylesheet" href="assets/css/auth.css?v=14">
 
 </head>
 
@@ -265,6 +298,21 @@ function field_error(array $errors, string $key): void
 
             <?php endif; ?>
 
+            <?php if ($successMessage !== ''): ?>
+
+                <div class="auth-message auth-message-success" role="status">
+
+                    <i class="bi bi-check-circle-fill"></i>
+
+                    <div>
+                        <p><?= e($successMessage) ?></p>
+                        <p><a href="login.php">Proceed to Sign In</a></p>
+                    </div>
+
+                </div>
+
+            <?php endif; ?>
+
             <form method="POST"
                 action="insert.php"
                 class="auth-form auth-register-form"
@@ -319,6 +367,48 @@ function field_error(array $errors, string $key): void
                         </div>
 
                         <?php field_error($errors, 'email'); ?>
+
+                    </div>
+
+                    <!-- ACCOUNT ROLE -->
+                    <div class="auth-field auth-field-full">
+
+                        <label for="role">Account Role</label>
+
+                        <div class="auth-input-wrap">
+                            <i class="bi bi-person-badge"></i>
+
+                            <select
+                                id="role"
+                                name="role"
+                                required
+                            >
+                                <option value="">Select your role</option>
+
+                                <option value="student"
+                                    <?= $role === 'student' ? 'selected' : '' ?>>
+                                    Student / Staff
+                                </option>
+
+                                <option value="personnel"
+                                    <?= $role === 'personnel' ? 'selected' : '' ?>>
+                                    IT Personnel
+                                </option>
+
+                                <option value="admin"
+                                    <?= $role === 'admin' ? 'selected' : '' ?>>
+                                    Administrator
+                                </option>
+
+                            </select>
+                        </div>
+
+                        <small class="auth-field-hint">
+                            IT Personnel accounts require administrator approval.
+                            Administrator accounts are created through a controlled setup process.
+                        </small>
+
+                        <?php field_error($errors, 'role'); ?>
 
                     </div>
 

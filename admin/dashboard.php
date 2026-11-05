@@ -1678,7 +1678,7 @@ function statusPercentage(int $value, int $total): int
             overlay.classList.remove('show');
         });
     });
-
+  
 </script>
 
 </body>

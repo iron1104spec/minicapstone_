@@ -9,17 +9,55 @@ require_role('admin');
 $pdo = db();
 $currentUserId = (int) $_SESSION['user_id'];
 
-// ==========================================
-// HANDLE POST ACTIONS
-// ==========================================
+/*
+|--------------------------------------------------------------------------
+| HELPER FUNCTION
+|--------------------------------------------------------------------------
+*/
+
+if (!function_exists('pcare_user_initials')) {
+    function pcare_user_initials(string $name): string
+    {
+        $parts = preg_split('/\s+/', trim($name));
+        $initials = '';
+
+        foreach (array_slice($parts, 0, 2) as $part) {
+            if ($part !== '') {
+                $initials .= strtoupper(substr($part, 0, 1));
+            }
+        }
+
+        return $initials ?: 'U';
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| HANDLE FORM SUBMISSIONS
+|--------------------------------------------------------------------------
+*/
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    csrf_verify();
+    /*
+     * IMPORTANT:
+     * csrf_verify() requires the submitted token as an argument.
+     * The token comes from csrf_field() in each form.
+     */
+
+    if (!csrf_verify($_POST['csrf_token'] ?? null)) {
+        http_response_code(403);
+        exit('Invalid CSRF token. Please refresh the page and try again.');
+    }
 
     $action = $_POST['action'] ?? '';
 
-    // ADD USER
+    /*
+    |--------------------------------------------------------------------------
+    | ADD USER
+    |--------------------------------------------------------------------------
+    */
+
     if ($action === 'add_user') {
 
         $fullName = trim($_POST['full_name'] ?? '');
@@ -29,12 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $contactNo = trim($_POST['contact_no'] ?? '');
         $password = $_POST['password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
-        $newRole = $_POST['role'] ?? '';
-
-        if (!in_array($newRole, ['student', 'personnel'], true)) {
-            header('Location: users.php?notice=invalidrole');
-            exit;
-        }
+        $role = $_POST['role'] ?? '';
 
         if (
             $fullName === '' ||
@@ -49,8 +82,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        if (
+            strlen($fullName) > 150 ||
+            strlen($email) > 150 ||
+            strlen($idNumber) > 50 ||
+            strlen($department) > 100 ||
+            strlen($contactNo) > 30
+        ) {
+            header('Location: users.php?notice=required');
+            exit;
+        }
+
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             header('Location: users.php?notice=invalidemail');
+            exit;
+        }
+
+        // Public account creation through this page is limited to these roles.
+        if (!in_array($role, ['student', 'personnel'], true)) {
+            header('Location: users.php?notice=invalidrole');
             exit;
         }
 
@@ -64,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        // Check whether the email or ID number is already registered.
         $duplicateStmt = $pdo->prepare("
             SELECT user_id
             FROM users
@@ -82,9 +133,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-
         try {
+
+            $passwordHash = password_hash(
+                $password,
+                PASSWORD_DEFAULT
+            );
 
             $insertStmt = $pdo->prepare("
                 INSERT INTO users (
@@ -112,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'full_name' => $fullName,
                 'email' => $email,
                 'password_hash' => $passwordHash,
-                'role' => $newRole,
+                'role' => $role,
                 'id_number' => $idNumber,
                 'department' => $department,
                 'contact_no' => $contactNo
@@ -123,94 +177,279 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         } catch (PDOException $e) {
 
-            error_log('LabSync Add User Error: ' . $e->getMessage());
+            error_log('PCare Add User Error: ' . $e->getMessage());
 
             header('Location: users.php?notice=createerror');
             exit;
         }
     }
 
-    // ACTIVATE / DEACTIVATE USER
-    $targetUserId = filter_input(INPUT_POST, 'user_id', FILTER_VALIDATE_INT);
+    /*
+    |--------------------------------------------------------------------------
+    | EDIT USER
+    |--------------------------------------------------------------------------
+    */
 
-    $newStatus = isset($_POST['new_status'])
-        ? (int) $_POST['new_status']
-        : -1;
+    if ($action === 'edit_user') {
 
-    if (!$targetUserId || !in_array($newStatus, [0, 1], true)) {
-        header('Location: users.php?notice=invalid');
-        exit;
-    }
+        $targetUserId = filter_input(
+            INPUT_POST,
+            'user_id',
+            FILTER_VALIDATE_INT
+        );
 
-    if ($targetUserId === $currentUserId && $newStatus === 0) {
-        header('Location: users.php?notice=self');
-        exit;
-    }
+        $fullName = trim($_POST['full_name'] ?? '');
+        $email = strtolower(trim($_POST['email'] ?? ''));
+        $idNumber = trim($_POST['id_number'] ?? '');
+        $department = trim($_POST['department'] ?? '');
+        $contactNo = trim($_POST['contact_no'] ?? '');
+        $requestedRole = $_POST['role'] ?? '';
 
-    $targetStmt = $pdo->prepare("
-        SELECT user_id, role, is_active
-        FROM users
-        WHERE user_id = :user_id
-        LIMIT 1
-    ");
+        if (!$targetUserId) {
+            header('Location: users.php?notice=invalid');
+            exit;
+        }
 
-    $targetStmt->execute([
-        'user_id' => $targetUserId
-    ]);
+        if (
+            $fullName === '' ||
+            $email === '' ||
+            strlen($fullName) > 150 ||
+            strlen($email) > 150 ||
+            strlen($idNumber) > 50 ||
+            strlen($department) > 100 ||
+            strlen($contactNo) > 30
+        ) {
+            header('Location: users.php?notice=editrequired');
+            exit;
+        }
 
-    $targetUser = $targetStmt->fetch(PDO::FETCH_ASSOC);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            header('Location: users.php?notice=invalidemail');
+            exit;
+        }
 
-    if (!$targetUser) {
-        header('Location: users.php?notice=notfound');
-        exit;
-    }
-
-    if (
-        $targetUser['role'] === 'admin' &&
-        (int) $targetUser['is_active'] === 1 &&
-        $newStatus === 0
-    ) {
-
-        $adminCount = $pdo->query("
-            SELECT COUNT(*)
+        // Confirm that the account exists.
+        $targetStmt = $pdo->prepare("
+            SELECT user_id, role
             FROM users
-            WHERE role = 'admin'
-            AND is_active = 1
-        ")->fetchColumn();
+            WHERE user_id = :user_id
+            LIMIT 1
+        ");
 
-        if ((int) $adminCount <= 1) {
-            header('Location: users.php?notice=lastadmin');
+        $targetStmt->execute([
+            'user_id' => $targetUserId
+        ]);
+
+        $targetUser = $targetStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$targetUser) {
+            header('Location: users.php?notice=notfound');
+            exit;
+        }
+
+        // Existing administrator accounts cannot be changed to another role.
+        if ($targetUser['role'] === 'admin') {
+
+            $newRole = 'admin';
+
+        } else {
+
+            if (!in_array($requestedRole, ['student', 'personnel'], true)) {
+                header('Location: users.php?notice=invalidrole');
+                exit;
+            }
+
+            $newRole = $requestedRole;
+        }
+
+        // Check duplicate email, excluding the account being edited.
+        $duplicateEmail = $pdo->prepare("
+            SELECT user_id
+            FROM users
+            WHERE email = :email
+              AND user_id <> :user_id
+            LIMIT 1
+        ");
+
+        $duplicateEmail->execute([
+            'email' => $email,
+            'user_id' => $targetUserId
+        ]);
+
+        if ($duplicateEmail->fetch(PDO::FETCH_ASSOC)) {
+            header('Location: users.php?notice=duplicate');
+            exit;
+        }
+
+        // Check duplicate ID number when the field is not empty.
+        if ($idNumber !== '') {
+
+            $duplicateId = $pdo->prepare("
+                SELECT user_id
+                FROM users
+                WHERE id_number = :id_number
+                  AND user_id <> :user_id
+                LIMIT 1
+            ");
+
+            $duplicateId->execute([
+                'id_number' => $idNumber,
+                'user_id' => $targetUserId
+            ]);
+
+            if ($duplicateId->fetch(PDO::FETCH_ASSOC)) {
+                header('Location: users.php?notice=duplicate');
+                exit;
+            }
+        }
+
+        try {
+
+            $updateStmt = $pdo->prepare("
+                UPDATE users
+                SET
+                    full_name = :full_name,
+                    email = :email,
+                    id_number = :id_number,
+                    department = :department,
+                    contact_no = :contact_no,
+                    role = :role
+                WHERE user_id = :user_id
+            ");
+
+            $updateStmt->execute([
+                'full_name' => $fullName,
+                'email' => $email,
+                'id_number' => $idNumber !== '' ? $idNumber : null,
+                'department' => $department !== '' ? $department : null,
+                'contact_no' => $contactNo !== '' ? $contactNo : null,
+                'role' => $newRole,
+                'user_id' => $targetUserId
+            ]);
+
+            // Update the current admin's session information when necessary.
+            if ($targetUserId === $currentUserId) {
+                $_SESSION['full_name'] = $fullName;
+                $_SESSION['email'] = $email;
+            }
+
+            header('Location: users.php?notice=updated');
+            exit;
+
+        } catch (PDOException $e) {
+
+            error_log('PCare Edit User Error: ' . $e->getMessage());
+
+            header('Location: users.php?notice=editerror');
             exit;
         }
     }
 
-    if ((int) $targetUser['is_active'] === $newStatus) {
-        header('Location: users.php?notice=unchanged');
+    /*
+    |--------------------------------------------------------------------------
+    | ACTIVATE / DEACTIVATE USER
+    |--------------------------------------------------------------------------
+    */
+
+    if ($action === 'change_status') {
+
+        $targetUserId = filter_input(
+            INPUT_POST,
+            'user_id',
+            FILTER_VALIDATE_INT
+        );
+
+        $newStatus = isset($_POST['new_status'])
+            ? (int) $_POST['new_status']
+            : -1;
+
+        if (
+            !$targetUserId ||
+            !in_array($newStatus, [0, 1], true)
+        ) {
+            header('Location: users.php?notice=invalid');
+            exit;
+        }
+
+        // Prevent an admin from deactivating their own account.
+        if (
+            $targetUserId === $currentUserId &&
+            $newStatus === 0
+        ) {
+            header('Location: users.php?notice=self');
+            exit;
+        }
+
+        $targetStmt = $pdo->prepare("
+            SELECT user_id, role, is_active
+            FROM users
+            WHERE user_id = :user_id
+            LIMIT 1
+        ");
+
+        $targetStmt->execute([
+            'user_id' => $targetUserId
+        ]);
+
+        $targetUser = $targetStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$targetUser) {
+            header('Location: users.php?notice=notfound');
+            exit;
+        }
+
+        // Do not deactivate the last active administrator.
+        if (
+            $targetUser['role'] === 'admin' &&
+            (int) $targetUser['is_active'] === 1 &&
+            $newStatus === 0
+        ) {
+
+            $adminCount = $pdo->query("
+                SELECT COUNT(*)
+                FROM users
+                WHERE role = 'admin'
+                  AND is_active = 1
+            ")->fetchColumn();
+
+            if ((int) $adminCount <= 1) {
+                header('Location: users.php?notice=lastadmin');
+                exit;
+            }
+        }
+
+        if ((int) $targetUser['is_active'] === $newStatus) {
+            header('Location: users.php?notice=unchanged');
+            exit;
+        }
+
+        $updateStmt = $pdo->prepare("
+            UPDATE users
+            SET is_active = :status
+            WHERE user_id = :user_id
+        ");
+
+        $updateStmt->execute([
+            'status' => $newStatus,
+            'user_id' => $targetUserId
+        ]);
+
+        header(
+            'Location: users.php?notice=' .
+            ($newStatus === 1 ? 'activated' : 'deactivated')
+        );
         exit;
     }
 
-    $updateStmt = $pdo->prepare("
-        UPDATE users
-        SET is_active = :status
-        WHERE user_id = :user_id
-    ");
-
-    $updateStmt->execute([
-        'status' => $newStatus,
-        'user_id' => $targetUserId
-    ]);
-
-    header(
-        'Location: users.php?notice=' .
-        ($newStatus === 1 ? 'activated' : 'deactivated')
-    );
-
+    header('Location: users.php?notice=invalid');
     exit;
 }
 
-// ==========================================
-// SEARCH AND FILTER
-// ==========================================
+/*
+|--------------------------------------------------------------------------
+| SEARCH AND FILTER
+|--------------------------------------------------------------------------
+*/
 
 $search = trim($_GET['search'] ?? '');
 $role = trim($_GET['role'] ?? '');
@@ -270,51 +509,39 @@ $stmt->execute($params);
 
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ==========================================
-// USER STATISTICS
-// ==========================================
+/*
+|--------------------------------------------------------------------------
+| USER STATISTICS
+|--------------------------------------------------------------------------
+*/
 
 $stats = $pdo->query("
     SELECT
         COUNT(*) AS total,
-        SUM(is_active = 1) AS active,
-        SUM(is_active = 0) AS inactive,
-        SUM(role = 'student') AS students,
-        SUM(role = 'personnel') AS personnel,
-        SUM(role = 'admin') AS administrators
+        COALESCE(SUM(is_active = 1), 0) AS active,
+        COALESCE(SUM(is_active = 0), 0) AS inactive,
+        COALESCE(SUM(role = 'student'), 0) AS students,
+        COALESCE(SUM(role = 'personnel'), 0) AS personnel,
+        COALESCE(SUM(role = 'admin'), 0) AS administrators
     FROM users
 ")->fetch(PDO::FETCH_ASSOC);
 
-function userStatusClass($active): string
-{
-    return (int) $active === 1 ? 'active' : 'inactive';
-}
-
-function userInitials(string $name): string
-{
-    $parts = preg_split('/\s+/', trim($name));
-    $initials = '';
-
-    foreach (array_slice($parts, 0, 2) as $part) {
-        if ($part !== '') {
-            $initials .= strtoupper(substr($part, 0, 1));
-        }
-    }
-
-    return $initials ?: 'U';
-}
-
-// ==========================================
-// NOTIFICATIONS
-// ==========================================
-
-$notice = $_GET['notice'] ?? '';
+/*
+|--------------------------------------------------------------------------
+| NOTIFICATIONS
+|--------------------------------------------------------------------------
+*/
 
 $notices = [
 
     'created' => [
         'type' => 'success',
         'message' => 'The new user account has been created successfully.'
+    ],
+
+    'updated' => [
+        'type' => 'success',
+        'message' => 'User information has been updated successfully.'
     ],
 
     'activated' => [
@@ -357,6 +584,11 @@ $notices = [
         'message' => 'Please complete all required fields.'
     ],
 
+    'editrequired' => [
+        'type' => 'danger',
+        'message' => 'Please check the user information. Some fields are invalid or too long.'
+    ],
+
     'invalidemail' => [
         'type' => 'danger',
         'message' => 'Please enter a valid email address.'
@@ -379,7 +611,12 @@ $notices = [
 
     'createerror' => [
         'type' => 'danger',
-        'message' => 'Unable to create the account. Please check the database configuration.'
+        'message' => 'Unable to create the account. Please check the server error log.'
+    ],
+
+    'editerror' => [
+        'type' => 'danger',
+        'message' => 'Unable to update the account. Please check the server error log.'
     ],
 
     'unchanged' => [
@@ -389,6 +626,7 @@ $notices = [
 
 ];
 
+$notice = $_GET['notice'] ?? '';
 $notification = $notices[$notice] ?? null;
 
 $roleLabels = [
@@ -407,8 +645,9 @@ $roleLabels = [
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>User Management | LabSync</title>
+    <title>User Management | PCare</title>
 
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -417,11 +656,13 @@ $roleLabels = [
         rel="stylesheet"
     >
 
+    <!-- Bootstrap CSS -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
 
+    <!-- Bootstrap Icons -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
         rel="stylesheet"
@@ -434,7 +675,7 @@ $roleLabels = [
             --deep-green: #245B54;
             --sidebar: #193F3A;
             --soft-mint: #E5F0ED;
-            --background: #F6F8F6;
+            --background: #F7F8F6;
             --text: #303C39;
             --muted: #84918B;
             --border: #E8EEEB;
@@ -658,6 +899,8 @@ $roleLabels = [
             margin: auto;
         }
 
+        /* PAGE HEADING */
+
         .page-eyebrow {
             color: var(--primary);
             font-size: 9px;
@@ -682,19 +925,25 @@ $roleLabels = [
 
         /* BUTTONS */
 
-        .btn-primary-custom {
+        .btn-primary-custom,
+        .btn-light-custom,
+        .action-button {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            background: var(--deep-green);
-            color: white;
-            border: 1px solid var(--deep-green);
+            gap: 7px;
             border-radius: 8px;
-            padding: 10px 15px;
             font-size: 11px;
             font-weight: 700;
             transition: .2s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary-custom {
+            background: var(--deep-green);
+            color: white;
+            border: 1px solid var(--deep-green);
+            padding: 10px 15px;
         }
 
         .btn-primary-custom:hover {
@@ -705,16 +954,10 @@ $roleLabels = [
         }
 
         .btn-light-custom {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
             background: white;
             border: 1px solid var(--border);
             color: #5F6E67;
-            border-radius: 8px;
             padding: 9px 13px;
-            font-size: 11px;
-            font-weight: 600;
         }
 
         .btn-light-custom:hover {
@@ -799,11 +1042,11 @@ $roleLabels = [
             margin-top: 5px;
         }
 
-        /* FILTERS */
-
         .filter-body {
             padding: 19px 21px;
         }
+
+        /* FORMS */
 
         .form-label {
             color: #56675F;
@@ -947,21 +1190,30 @@ $roleLabels = [
             background: currentColor;
         }
 
+        /* ACTION BUTTONS */
+
         .action-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            border-radius: 6px;
             padding: 7px 9px;
             font-size: 9px;
-            font-weight: 700;
             white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        .btn-edit {
+            background: #EAF1FA;
+            color: #496F9E;
+            border-color: #D8E4F2;
+        }
+
+        .btn-edit:hover {
+            background: #496F9E;
+            color: white;
         }
 
         .btn-activate {
             background: #E7F4EB;
             color: #39805A;
-            border: 1px solid #D2E9D9;
+            border-color: #D2E9D9;
         }
 
         .btn-activate:hover {
@@ -972,7 +1224,7 @@ $roleLabels = [
         .btn-deactivate {
             background: #FFF0ED;
             color: #A3483A;
-            border: 1px solid #F1D8D2;
+            border-color: #F1D8D2;
         }
 
         .btn-deactivate:hover {
@@ -1025,7 +1277,7 @@ $roleLabels = [
             font-size: 11px;
         }
 
-        /* MODAL */
+        /* MODALS */
 
         .modal-content {
             border: 1px solid var(--border);
@@ -1058,6 +1310,8 @@ $roleLabels = [
             color: #718078;
             font-size: 10px;
         }
+
+        /* FOOTER */
 
         .page-footer {
             text-align: center;
@@ -1098,7 +1352,6 @@ $roleLabels = [
                 z-index: 1030;
                 background: rgba(16,35,31,.42);
             }
-
         }
 
         @media (max-width: 768px) {
@@ -1132,7 +1385,6 @@ $roleLabels = [
             .filter-body {
                 padding: 16px;
             }
-
         }
 
         @media (max-width: 480px) {
@@ -1148,7 +1400,6 @@ $roleLabels = [
             .page-heading-actions button {
                 width: 100%;
             }
-
         }
 
     </style>
@@ -1157,11 +1408,10 @@ $roleLabels = [
 
 <body>
 
-    <!-- MOBILE SIDEBAR OVERLAY -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-
     <!-- SIDEBAR -->
+
     <aside class="sidebar" id="sidebar">
 
         <a href="dashboard.php" class="brand">
@@ -1171,12 +1421,11 @@ $roleLabels = [
             </span>
 
             <span>
-                <span class="brand-name">LabSync</span>
+                <span class="brand-name">PCare</span>
                 <span class="brand-subtitle">LABORATORY MANAGEMENT</span>
             </span>
 
         </a>
-
 
         <p class="sidebar-label">MAIN MENU</p>
 
@@ -1219,18 +1468,24 @@ $roleLabels = [
 
         </nav>
 
-
         <div class="sidebar-bottom">
 
             <div class="admin-profile">
 
                 <div class="admin-avatar">
-                    AD
+                    <?= e(pcare_user_initials($_SESSION['full_name'] ?? 'Administrator')) ?>
                 </div>
 
                 <div>
-                    <div class="admin-name">Administrator</div>
-                    <div class="admin-role">System Administrator</div>
+
+                    <div class="admin-name">
+                        <?= e($_SESSION['full_name'] ?? 'Administrator') ?>
+                    </div>
+
+                    <div class="admin-role">
+                        System Administrator
+                    </div>
+
                 </div>
 
             </div>
@@ -1244,12 +1499,10 @@ $roleLabels = [
 
     </aside>
 
+    <!-- MAIN CONTENT -->
 
-    <!-- MAIN CONTENT WRAPPER -->
     <div class="main-wrapper">
 
-
-        <!-- TOPBAR -->
         <header class="topbar">
 
             <div class="d-flex align-items-center gap-3">
@@ -1264,12 +1517,12 @@ $roleLabels = [
                 </button>
 
                 <div class="breadcrumb-text">
-                    Administrator <span class="mx-2">/</span>
+                    Administrator
+                    <span class="mx-2">/</span>
                     <strong>User Management</strong>
                 </div>
 
             </div>
-
 
             <div class="topbar-right">
 
@@ -1287,11 +1540,10 @@ $roleLabels = [
 
         </header>
 
-
         <main class="main-content">
 
-
             <!-- PAGE HEADING -->
+
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
 
                 <div>
@@ -1310,7 +1562,6 @@ $roleLabels = [
 
                 </div>
 
-
                 <div class="page-heading-actions">
 
                     <button
@@ -1327,8 +1578,8 @@ $roleLabels = [
 
             </div>
 
-
             <!-- NOTIFICATIONS -->
+
             <?php if ($notification): ?>
 
                 <div
@@ -1351,22 +1602,20 @@ $roleLabels = [
 
             <?php endif; ?>
 
-
             <!-- USER STATISTICS -->
+
+            <?php
+            $statCards = [
+                ['Total Users', $stats['total'], 'bi-people'],
+                ['Active Users', $stats['active'], 'bi-person-check'],
+                ['Inactive Users', $stats['inactive'], 'bi-person-x'],
+                ['Students', $stats['students'], 'bi-mortarboard'],
+                ['IT Personnel', $stats['personnel'], 'bi-tools'],
+                ['Administrators', $stats['administrators'], 'bi-shield-check']
+            ];
+            ?>
+
             <div class="row g-3 mb-4">
-
-                <?php
-
-                $statCards = [
-                    ['Total Users', $stats['total'], 'bi-people'],
-                    ['Active Users', $stats['active'], 'bi-person-check'],
-                    ['Inactive Users', $stats['inactive'], 'bi-person-x'],
-                    ['Students', $stats['students'], 'bi-mortarboard'],
-                    ['IT Personnel', $stats['personnel'], 'bi-tools'],
-                    ['Administrators', $stats['administrators'], 'bi-shield-check']
-                ];
-
-                ?>
 
                 <?php foreach ($statCards as $card): ?>
 
@@ -1398,8 +1647,8 @@ $roleLabels = [
 
             </div>
 
-
             <!-- SEARCH AND FILTERS -->
+
             <section class="content-card mb-4">
 
                 <div class="card-heading">
@@ -1414,7 +1663,6 @@ $roleLabels = [
                     </span>
 
                 </div>
-
 
                 <div class="filter-body">
 
@@ -1436,7 +1684,6 @@ $roleLabels = [
 
                         </div>
 
-
                         <div class="col-6 col-lg-2">
 
                             <label class="form-label">
@@ -1447,22 +1694,30 @@ $roleLabels = [
 
                                 <option value="">All Roles</option>
 
-                                <option value="student" <?= $role === 'student' ? 'selected' : '' ?>>
+                                <option
+                                    value="student"
+                                    <?= $role === 'student' ? 'selected' : '' ?>
+                                >
                                     Student
                                 </option>
 
-                                <option value="personnel" <?= $role === 'personnel' ? 'selected' : '' ?>>
+                                <option
+                                    value="personnel"
+                                    <?= $role === 'personnel' ? 'selected' : '' ?>
+                                >
                                     IT Personnel
                                 </option>
 
-                                <option value="admin" <?= $role === 'admin' ? 'selected' : '' ?>>
+                                <option
+                                    value="admin"
+                                    <?= $role === 'admin' ? 'selected' : '' ?>
+                                >
                                     Administrator
                                 </option>
 
                             </select>
 
                         </div>
-
 
                         <div class="col-6 col-lg-2">
 
@@ -1474,11 +1729,17 @@ $roleLabels = [
 
                                 <option value="">All Statuses</option>
 
-                                <option value="active" <?= $status === 'active' ? 'selected' : '' ?>>
+                                <option
+                                    value="active"
+                                    <?= $status === 'active' ? 'selected' : '' ?>
+                                >
                                     Active
                                 </option>
 
-                                <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>
+                                <option
+                                    value="inactive"
+                                    <?= $status === 'inactive' ? 'selected' : '' ?>
+                                >
                                     Inactive
                                 </option>
 
@@ -1486,10 +1747,12 @@ $roleLabels = [
 
                         </div>
 
-
                         <div class="col-12 col-lg-3 d-flex align-items-end gap-2">
 
-                            <button type="submit" class="btn-primary-custom flex-grow-1">
+                            <button
+                                type="submit"
+                                class="btn-primary-custom flex-grow-1"
+                            >
                                 <i class="bi bi-search"></i>
                                 Apply Filters
                             </button>
@@ -1506,8 +1769,8 @@ $roleLabels = [
 
             </section>
 
-
             <!-- REGISTERED USERS TABLE -->
+
             <section class="content-card">
 
                 <div class="card-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -1530,7 +1793,6 @@ $roleLabels = [
 
                 </div>
 
-
                 <div class="table-responsive">
 
                     <table class="table table-hover align-middle mb-0">
@@ -1544,189 +1806,219 @@ $roleLabels = [
                                 <th>Role</th>
                                 <th>Status</th>
                                 <th>Date Registered</th>
-                                <th>Account Action</th>
+                                <th>Account Actions</th>
                             </tr>
 
                         </thead>
 
-
                         <tbody>
 
-                        <?php if (empty($users)): ?>
-
-                            <tr>
-
-                                <td colspan="7" class="empty-state">
-
-                                    <i class="bi bi-people"></i>
-
-                                    <strong class="d-block text-dark">
-                                        No user accounts found
-                                    </strong>
-
-                                    <span>
-                                        Try adjusting your search or filter settings.
-                                    </span>
-
-                                </td>
-
-                            </tr>
-
-                        <?php else: ?>
-
-                            <?php foreach ($users as $user): ?>
+                            <?php if (empty($users)): ?>
 
                                 <tr>
 
-                                    <td>
+                                    <td colspan="7" class="empty-state">
 
-                                        <div class="user-cell">
+                                        <i class="bi bi-people"></i>
 
-                                            <div class="user-avatar-table">
-                                                <?= e(userInitials($user['full_name'])) ?>
-                                            </div>
+                                        <strong class="d-block text-dark">
+                                            No user accounts found
+                                        </strong>
 
-                                            <div>
-
-                                                <div class="user-name">
-                                                    <?= e($user['full_name']) ?>
-                                                </div>
-
-                                                <div class="user-email">
-                                                    <?= e($user['email']) ?>
-                                                </div>
-
-                                            </div>
-
-                                        </div>
-
-                                    </td>
-
-
-                                    <td>
-                                        <?= e($user['id_number'] ?? '—') ?>
-                                    </td>
-
-
-                                    <td>
-                                        <?= e($user['department'] ?? '—') ?>
-                                    </td>
-
-
-                                    <td>
-
-                                        <span class="role-badge <?= e($user['role']) ?>">
-                                            <?= e($roleLabels[$user['role']] ?? $user['role']) ?>
+                                        <span>
+                                            Try adjusting your search or filter settings.
                                         </span>
-
-                                    </td>
-
-
-                                    <td>
-
-                                        <span class="status-badge <?= userStatusClass($user['is_active']) ?>">
-
-                                            <span class="status-dot"></span>
-
-                                            <?= (int) $user['is_active'] === 1
-                                                ? 'Active'
-                                                : 'Inactive' ?>
-
-                                        </span>
-
-                                    </td>
-
-
-                                    <td>
-                                        <?= e(date('M d, Y', strtotime($user['created_at']))) ?>
-                                    </td>
-
-
-                                    <td>
-
-                                        <?php if ((int) $user['is_active'] === 1): ?>
-
-                                            <?php if ((int) $user['user_id'] === $currentUserId): ?>
-
-                                                <span class="current-account">
-                                                    <i class="bi bi-shield-check me-1"></i>
-                                                    Current account
-                                                </span>
-
-                                            <?php else: ?>
-
-                                                <form
-                                                    method="POST"
-                                                    onsubmit="return confirm('Are you sure you want to deactivate this account? The user will no longer be able to log in.');"
-                                                >
-
-                                                    <?= csrf_field() ?>
-
-                                                    <input
-                                                        type="hidden"
-                                                        name="user_id"
-                                                        value="<?= (int) $user['user_id'] ?>"
-                                                    >
-
-                                                    <input
-                                                        type="hidden"
-                                                        name="new_status"
-                                                        value="0"
-                                                    >
-
-                                                    <button type="submit" class="action-button btn-deactivate">
-                                                        <i class="bi bi-person-x"></i>
-                                                        Deactivate
-                                                    </button>
-
-                                                </form>
-
-                                            <?php endif; ?>
-
-                                        <?php else: ?>
-
-                                            <form
-                                                method="POST"
-                                                onsubmit="return confirm('Are you sure you want to activate this account?');"
-                                            >
-
-                                                <?= csrf_field() ?>
-
-                                                <input
-                                                    type="hidden"
-                                                    name="user_id"
-                                                    value="<?= (int) $user['user_id'] ?>"
-                                                >
-
-                                                <input
-                                                    type="hidden"
-                                                    name="new_status"
-                                                    value="1"
-                                                >
-
-                                                <button type="submit" class="action-button btn-activate">
-                                                    <i class="bi bi-person-check"></i>
-                                                    Activate
-                                                </button>
-
-                                            </form>
-
-                                        <?php endif; ?>
 
                                     </td>
 
                                 </tr>
 
-                            <?php endforeach; ?>
+                            <?php else: ?>
 
-                        <?php endif; ?>
+                                <?php foreach ($users as $user): ?>
+
+                                    <tr>
+
+                                        <td>
+
+                                            <div class="user-cell">
+
+                                                <div class="user-avatar-table">
+                                                    <?= e(pcare_user_initials($user['full_name'])) ?>
+                                                </div>
+
+                                                <div>
+
+                                                    <div class="user-name">
+                                                        <?= e($user['full_name']) ?>
+                                                    </div>
+
+                                                    <div class="user-email">
+                                                        <?= e($user['email']) ?>
+                                                    </div>
+
+                                                </div>
+
+                                            </div>
+
+                                        </td>
+
+                                        <td>
+                                            <?= e($user['id_number'] ?? '—') ?>
+                                        </td>
+
+                                        <td>
+                                            <?= e($user['department'] ?? '—') ?>
+                                        </td>
+
+                                        <td>
+
+                                            <span class="role-badge <?= e($user['role']) ?>">
+                                                <?= e($roleLabels[$user['role']] ?? $user['role']) ?>
+                                            </span>
+
+                                        </td>
+
+                                        <td>
+
+                                            <span class="status-badge <?= (int) $user['is_active'] === 1 ? 'active' : 'inactive' ?>">
+
+                                                <span class="status-dot"></span>
+
+                                                <?= (int) $user['is_active'] === 1
+                                                    ? 'Active'
+                                                    : 'Inactive' ?>
+
+                                            </span>
+
+                                        </td>
+
+                                        <td>
+                                            <?= e(date('M d, Y', strtotime($user['created_at']))) ?>
+                                        </td>
+
+                                        <td>
+
+                                            <div class="d-flex flex-wrap gap-2">
+
+                                                <!-- EDIT BUTTON -->
+
+                                                <button
+                                                    type="button"
+                                                    class="action-button btn-edit"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editUserModal<?= (int) $user['user_id'] ?>"
+                                                >
+                                                    <i class="bi bi-pencil-square"></i>
+                                                    Edit
+                                                </button>
+
+                                                <!-- ACTIVE ACCOUNT -->
+
+                                                <?php if ((int) $user['is_active'] === 1): ?>
+
+                                                    <?php if ((int) $user['user_id'] === $currentUserId): ?>
+
+                                                        <span class="current-account">
+                                                            <i class="bi bi-shield-check me-1"></i>
+                                                            Current account
+                                                        </span>
+
+                                                    <?php else: ?>
+
+                                                        <form
+                                                            method="POST"
+                                                            onsubmit="return confirm('Are you sure you want to deactivate this account? The user will no longer be able to log in.');"
+                                                        >
+
+                                                            <?= csrf_field() ?>
+
+                                                            <input
+                                                                type="hidden"
+                                                                name="action"
+                                                                value="change_status"
+                                                            >
+
+                                                            <input
+                                                                type="hidden"
+                                                                name="user_id"
+                                                                value="<?= (int) $user['user_id'] ?>"
+                                                            >
+
+                                                            <input
+                                                                type="hidden"
+                                                                name="new_status"
+                                                                value="0"
+                                                            >
+
+                                                            <button
+                                                                type="submit"
+                                                                class="action-button btn-deactivate"
+                                                            >
+                                                                <i class="bi bi-person-x"></i>
+                                                                Deactivate
+                                                            </button>
+
+                                                        </form>
+
+                                                    <?php endif; ?>
+
+                                                <?php else: ?>
+
+                                                    <!-- INACTIVE ACCOUNT -->
+
+                                                    <form
+                                                        method="POST"
+                                                        onsubmit="return confirm('Are you sure you want to activate this account?');"
+                                                    >
+
+                                                        <?= csrf_field() ?>
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="action"
+                                                            value="change_status"
+                                                        >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="user_id"
+                                                            value="<?= (int) $user['user_id'] ?>"
+                                                        >
+
+                                                        <input
+                                                            type="hidden"
+                                                            name="new_status"
+                                                            value="1"
+                                                        >
+
+                                                        <button
+                                                            type="submit"
+                                                            class="action-button btn-activate"
+                                                        >
+                                                            <i class="bi bi-person-check"></i>
+                                                            Activate
+                                                        </button>
+
+                                                    </form>
+
+                                                <?php endif; ?>
+
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+
+                                <?php endforeach; ?>
+
+                            <?php endif; ?>
 
                         </tbody>
 
                     </table>
 
                 </div>
-
 
                 <div class="table-footer">
 
@@ -1740,260 +2032,515 @@ $roleLabels = [
 
             </section>
 
-
-            <!-- ADD USER MODAL -->
-            <div
-                class="modal fade"
-                id="addUserModal"
-                tabindex="-1"
-                aria-labelledby="addUserModalLabel"
-                aria-hidden="true"
-            >
-
-                <div class="modal-dialog modal-dialog-centered modal-lg">
-
-                    <div class="modal-content">
-
-                        <div class="modal-header px-4 py-3">
-
-                            <div>
-
-                                <h5 class="modal-title" id="addUserModalLabel">
-                                    <i class="bi bi-person-plus me-2"></i>
-                                    Create User Account
-                                </h5>
-
-                                <div class="modal-description">
-                                    Add a Student or IT Personnel account to LabSync.
-                                </div>
-
-                            </div>
-
-                            <button
-                                type="button"
-                                class="btn-close"
-                                data-bs-dismiss="modal"
-                                aria-label="Close"
-                            ></button>
-
-                        </div>
-
-
-                        <form method="POST">
-
-                            <?= csrf_field() ?>
-
-                            <input type="hidden" name="action" value="add_user">
-
-
-                            <div class="modal-body p-4">
-
-                                <div class="row g-3">
-
-                                    <div class="col-12">
-
-                                        <label class="form-label">
-                                            Full Name
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            name="full_name"
-                                            class="form-control"
-                                            placeholder="Enter complete name"
-                                            required
-                                        >
-
-                                    </div>
-
-
-                                    <div class="col-md-6">
-
-                                        <label class="form-label">
-                                            Email Address
-                                        </label>
-
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            class="form-control"
-                                            placeholder="example@email.com"
-                                            required
-                                        >
-
-                                    </div>
-
-
-                                    <div class="col-md-6">
-
-                                        <label class="form-label">
-                                            ID Number
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            name="id_number"
-                                            class="form-control"
-                                            placeholder="Enter ID number"
-                                            required
-                                        >
-
-                                    </div>
-
-
-                                    <div class="col-md-6">
-
-                                        <label class="form-label">
-                                            Department
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            name="department"
-                                            class="form-control"
-                                            placeholder="Enter department"
-                                            required
-                                        >
-
-                                    </div>
-
-
-                                    <div class="col-md-6">
-
-                                        <label class="form-label">
-                                            Contact Number
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            name="contact_no"
-                                            class="form-control"
-                                            placeholder="Enter contact number"
-                                            required
-                                        >
-
-                                    </div>
-
-
-                                    <div class="col-12">
-
-                                        <label class="form-label">
-                                            Account Role
-                                        </label>
-
-                                        <select name="role" class="form-select" required>
-
-                                            <option value="">
-                                                Select account role
-                                            </option>
-
-                                            <option value="student">
-                                                Student
-                                            </option>
-
-                                            <option value="personnel">
-                                                IT Personnel
-                                            </option>
-
-                                        </select>
-
-                                        <small class="text-secondary d-block mt-2">
-                                            Administrator accounts cannot be created through this form.
-                                        </small>
-
-                                    </div>
-
-
-                                    <div class="col-md-6">
-
-                                        <label class="form-label">
-                                            Password
-                                        </label>
-
-                                        <input
-                                            type="password"
-                                            name="password"
-                                            class="form-control"
-                                            minlength="8"
-                                            placeholder="At least 8 characters"
-                                            autocomplete="new-password"
-                                            required
-                                        >
-
-                                    </div>
-
-
-                                    <div class="col-md-6">
-
-                                        <label class="form-label">
-                                            Confirm Password
-                                        </label>
-
-                                        <input
-                                            type="password"
-                                            name="confirm_password"
-                                            class="form-control"
-                                            minlength="8"
-                                            placeholder="Re-enter password"
-                                            autocomplete="new-password"
-                                            required
-                                        >
-
-                                    </div>
-
-                                </div>
-
-
-                                <div class="password-note mt-4">
-
-                                    <i class="bi bi-shield-lock me-2"></i>
-
-                                    New accounts will be activated automatically.
-                                    Passwords are securely hashed before being stored.
-
-                                </div>
-
-                            </div>
-
-
-                            <div class="modal-footer px-4 py-3">
-
-                                <button
-                                    type="button"
-                                    class="btn-light-custom px-3"
-                                    data-bs-dismiss="modal"
-                                >
-                                    Cancel
-                                </button>
-
-                                <button type="submit" class="btn-primary-custom px-4">
-
-                                    <i class="bi bi-person-plus"></i>
-                                    Create Account
-
-                                </button>
-
-                            </div>
-
-                        </form>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
             <footer class="page-footer">
-                LabSync · Administrator Portal · SLSU Lucena Campus
+                PCare · Administrator Portal · SLSU Lucena Campus
             </footer>
 
         </main>
 
     </div>
 
+    <!--
+    |--------------------------------------------------------------------------
+    | EDIT USER MODALS
+    | These are placed outside the table to maintain valid HTML.
+    |--------------------------------------------------------------------------
+    -->
+
+    <?php foreach ($users as $user): ?>
+
+        <div
+            class="modal fade"
+            id="editUserModal<?= (int) $user['user_id'] ?>"
+            tabindex="-1"
+            aria-labelledby="editUserModalLabel<?= (int) $user['user_id'] ?>"
+            aria-hidden="true"
+        >
+
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+
+                <div class="modal-content">
+
+                    <div class="modal-header px-4 py-3">
+
+                        <div>
+
+                            <h5
+                                class="modal-title"
+                                id="editUserModalLabel<?= (int) $user['user_id'] ?>"
+                            >
+                                <i class="bi bi-pencil-square me-2"></i>
+                                Edit User Information
+                            </h5>
+
+                            <div class="modal-description">
+                                Update the selected account details.
+                            </div>
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close"
+                        ></button>
+
+                    </div>
+
+                    <form method="POST">
+
+                        <?= csrf_field() ?>
+
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="edit_user"
+                        >
+
+                        <input
+                            type="hidden"
+                            name="user_id"
+                            value="<?= (int) $user['user_id'] ?>"
+                        >
+
+                        <div class="modal-body p-4">
+
+                            <div class="row g-3">
+
+                                <div class="col-12">
+
+                                    <label class="form-label">
+                                        Full Name
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="full_name"
+                                        class="form-control"
+                                        maxlength="150"
+                                        value="<?= e($user['full_name']) ?>"
+                                        required
+                                    >
+
+                                </div>
+
+                                <div class="col-md-6">
+
+                                    <label class="form-label">
+                                        Email Address
+                                    </label>
+
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        class="form-control"
+                                        maxlength="150"
+                                        value="<?= e($user['email']) ?>"
+                                        required
+                                    >
+
+                                </div>
+
+                                <div class="col-md-6">
+
+                                    <label class="form-label">
+                                        ID Number
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="id_number"
+                                        class="form-control"
+                                        maxlength="50"
+                                        value="<?= e($user['id_number'] ?? '') ?>"
+                                    >
+
+                                </div>
+
+                                <div class="col-md-6">
+
+                                    <label class="form-label">
+                                        Department
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="department"
+                                        class="form-control"
+                                        maxlength="100"
+                                        value="<?= e($user['department'] ?? '') ?>"
+                                    >
+
+                                </div>
+
+                                <div class="col-md-6">
+
+                                    <label class="form-label">
+                                        Contact Number
+                                    </label>
+
+                                    <input
+                                        type="text"
+                                        name="contact_no"
+                                        class="form-control"
+                                        maxlength="30"
+                                        value="<?= e($user['contact_no'] ?? '') ?>"
+                                    >
+
+                                </div>
+
+                                <div class="col-12">
+
+                                    <label class="form-label">
+                                        Account Role
+                                    </label>
+
+                                    <?php if ($user['role'] === 'admin'): ?>
+
+                                        <input
+                                            type="text"
+                                            class="form-control"
+                                            value="Administrator"
+                                            disabled
+                                        >
+
+                                        <input
+                                            type="hidden"
+                                            name="role"
+                                            value="admin"
+                                        >
+
+                                        <small class="text-secondary d-block mt-2">
+                                            Administrator roles cannot be changed through this form.
+                                        </small>
+
+                                    <?php else: ?>
+
+                                        <select
+                                            name="role"
+                                            class="form-select"
+                                            required
+                                        >
+
+                                            <option
+                                                value="student"
+                                                <?= $user['role'] === 'student' ? 'selected' : '' ?>
+                                            >
+                                                Student
+                                            </option>
+
+                                            <option
+                                                value="personnel"
+                                                <?= $user['role'] === 'personnel' ? 'selected' : '' ?>
+                                            >
+                                                IT Personnel
+                                            </option>
+
+                                        </select>
+
+                                    <?php endif; ?>
+
+                                </div>
+
+                            </div>
+
+                            <div class="password-note mt-4">
+
+                                <i class="bi bi-shield-lock me-2"></i>
+
+                                Passwords are not changed in this form.
+                                The user's current password will remain unchanged.
+
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer px-4 py-3">
+
+                            <button
+                                type="button"
+                                class="btn-light-custom px-3"
+                                data-bs-dismiss="modal"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="submit"
+                                class="btn-primary-custom px-4"
+                            >
+                                <i class="bi bi-check2-circle"></i>
+                                Save Changes
+                            </button>
+
+                        </div>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    <?php endforeach; ?>
+
+    <!--
+    |--------------------------------------------------------------------------
+    | ADD USER MODAL
+    |--------------------------------------------------------------------------
+    -->
+
+    <div
+        class="modal fade"
+        id="addUserModal"
+        tabindex="-1"
+        aria-labelledby="addUserModalLabel"
+        aria-hidden="true"
+    >
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+
+            <div class="modal-content">
+
+                <div class="modal-header px-4 py-3">
+
+                    <div>
+
+                        <h5 class="modal-title" id="addUserModalLabel">
+                            <i class="bi bi-person-plus me-2"></i>
+                            Create User Account
+                        </h5>
+
+                        <div class="modal-description">
+                            Add a Student or IT Personnel account to PCare.
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+
+                </div>
+
+                <form method="POST">
+
+                    <?= csrf_field() ?>
+
+                    <input
+                        type="hidden"
+                        name="action"
+                        value="add_user"
+                    >
+
+                    <div class="modal-body p-4">
+
+                        <div class="row g-3">
+
+                            <div class="col-12">
+
+                                <label class="form-label">
+                                    Full Name
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="full_name"
+                                    class="form-control"
+                                    maxlength="150"
+                                    placeholder="Enter complete name"
+                                    required
+                                >
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Email Address
+                                </label>
+
+                                <input
+                                    type="email"
+                                    name="email"
+                                    class="form-control"
+                                    maxlength="150"
+                                    placeholder="example@email.com"
+                                    required
+                                >
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    ID Number
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="id_number"
+                                    class="form-control"
+                                    maxlength="50"
+                                    placeholder="Enter ID number"
+                                    required
+                                >
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Department
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="department"
+                                    class="form-control"
+                                    maxlength="100"
+                                    placeholder="Enter department"
+                                    required
+                                >
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Contact Number
+                                </label>
+
+                                <input
+                                    type="text"
+                                    name="contact_no"
+                                    class="form-control"
+                                    maxlength="30"
+                                    placeholder="Enter contact number"
+                                    required
+                                >
+
+                            </div>
+
+                            <div class="col-12">
+
+                                <label class="form-label">
+                                    Account Role
+                                </label>
+
+                                <select
+                                    name="role"
+                                    class="form-select"
+                                    required
+                                >
+
+                                    <option value="">
+                                        Select account role
+                                    </option>
+
+                                    <option value="student">
+                                        Student
+                                    </option>
+
+                                    <option value="personnel">
+                                        IT Personnel
+                                    </option>
+
+                                </select>
+
+                                <small class="text-secondary d-block mt-2">
+                                    Administrator accounts cannot be created through this form.
+                                </small>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Password
+                                </label>
+
+                                <input
+                                    type="password"
+                                    name="password"
+                                    class="form-control"
+                                    minlength="8"
+                                    placeholder="At least 8 characters"
+                                    autocomplete="new-password"
+                                    required
+                                >
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">
+                                    Confirm Password
+                                </label>
+
+                                <input
+                                    type="password"
+                                    name="confirm_password"
+                                    class="form-control"
+                                    minlength="8"
+                                    placeholder="Re-enter password"
+                                    autocomplete="new-password"
+                                    required
+                                >
+
+                            </div>
+
+                        </div>
+
+                        <div class="password-note mt-4">
+
+                            <i class="bi bi-shield-lock me-2"></i>
+
+                            New accounts created by the administrator will be active.
+                            Passwords are securely hashed before being stored.
+
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer px-4 py-3">
+
+                        <button
+                            type="button"
+                            class="btn-light-custom px-3"
+                            data-bs-dismiss="modal"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="btn-primary-custom px-4"
+                        >
+                            <i class="bi bi-person-plus"></i>
+                            Create Account
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- BOOTSTRAP JAVASCRIPT -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- SIDEBAR JAVASCRIPT -->
 
     <script>
 

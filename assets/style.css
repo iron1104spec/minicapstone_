@@ -1120,7 +1120,8 @@ button:focus-visible {
     *::after {
         scroll-behavior: auto !important;
         transition-duration: .01ms !important;
-        animation-duration: .01ms !important;
+        anif8mation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
     }
+    
 }
