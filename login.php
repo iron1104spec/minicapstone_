@@ -1,6 +1,10 @@
 
 <?php
 
+// ==========================================
+// LABSYNC - LOGIN
+// ==========================================
+
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/config/db.php';
@@ -8,35 +12,54 @@ require_once __DIR__ . '/config/db.php';
 $errors = [];
 $email = '';
 
+// ==========================================
+// PROCESS LOGIN FORM
+// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    // Verify CSRF token.
     if (!csrf_verify($_POST['csrf_token'] ?? null)) {
 
         $errors[] = 'Your session may have expired. Please refresh and try again.';
 
     } else {
 
+        // Get submitted credentials.
         $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         $password = (string) ($_POST['password'] ?? '');
 
+        // Validate email.
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Please enter a valid email address.';
         }
 
+        // Validate password.
         if ($password === '') {
             $errors[] = 'Please enter your password.';
         }
+
+        // ==========================================
+        // AUTHENTICATE USER
+        // ==========================================
 
         if (empty($errors)) {
 
             try {
 
-                $stmt = db()->prepare(
-                    'SELECT user_id, full_name, email, password_hash, role, is_active
-                     FROM users
-                     WHERE email = :email
-                     LIMIT 1'
-                );
+                // Use the $pdo connection from config/db.php.
+                $stmt = $pdo->prepare("
+                    SELECT
+                        user_id,
+                        full_name,
+                        email,
+                        password_hash,
+                        role,
+                        is_active
+                    FROM users
+                    WHERE email = :email
+                    LIMIT 1
+                ");
 
                 $stmt->execute([
                     ':email' => $email
@@ -44,53 +67,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if (
-                    !$user ||
-                    !password_verify($password, $user['password_hash']) ||
-                    (int) $user['is_active'] !== 1
-                ) {
+                // Check whether the account exists.
+                if (!$user) {
 
                     $errors[] = 'Invalid email or password.';
 
-                } elseif (!in_array($user['role'], ['student', 'personnel', 'admin'], true)) {
-
-                    $errors[] = 'Your account has an invalid role. Please contact the administrator.';
-
                 } else {
 
-                    // Regenerate session ID after successful login.
-                    session_regenerate_id(true);
+                    // Verify the submitted password against its stored hash.
+                    $passwordIsValid = password_verify(
+                        $password,
+                        $user['password_hash']
+                    );
 
-                    $_SESSION['user_id'] = (int) $user['user_id'];
-                    $_SESSION['full_name'] = $user['full_name'];
-                    $_SESSION['email'] = $user['email'];
-                    $_SESSION['role'] = $user['role'];
+                    // Check account activation.
+                    $accountIsActive = (int) $user['is_active'] === 1;
 
-                    // Remove registration-only flag if present.
-                    unset($_SESSION['registration_completed']);
+                    if (!$passwordIsValid || !$accountIsActive) {
 
-                    // Redirect according to the actual database role.
-                    switch ($user['role']) {
+                        $errors[] = 'Invalid email or password.';
 
-                        case 'student':
-                            redirect('student/dashboard.php');
-                            break;
+                    } elseif (
+                        !in_array(
+                            $user['role'],
+                            ['student', 'personnel', 'admin'],
+                            true
+                        )
+                    ) {
 
-                        case 'personnel':
-                            redirect('it-personnel/dashboard.php');
-                            break;
+                        $errors[] = 'Your account has an invalid role. Please contact the administrator.';
 
-                        case 'admin':
-                            redirect('admin/dashboard.php');
-                            break;
+                    } else {
+
+                        // ==========================================
+                        // LOGIN SUCCESSFUL
+                        // ==========================================
+
+                        // Regenerate session ID for security.
+                        session_regenerate_id(true);
+
+                        // Store authenticated user information.
+                        $_SESSION['user_id'] = (int) $user['user_id'];
+                        $_SESSION['full_name'] = $user['full_name'];
+                        $_SESSION['email'] = $user['email'];
+                        $_SESSION['role'] = $user['role'];
+
+                        // Remove registration-only session flag.
+                        unset($_SESSION['registration_completed']);
+
+                        // ==========================================
+                        // ROLE-BASED REDIRECTION
+                        // ==========================================
+
+                        switch ($user['role']) {
+
+                            case 'student':
+                                redirect('student/dashboard.php');
+                                exit;
+
+                            case 'personnel':
+                                redirect('it-personnel/dashboard.php');
+                                exit;
+
+                            case 'admin':
+                                redirect('admin/dashboard.php');
+                                exit;
+
+                            default:
+                                $errors[] = 'Unable to identify your account role.';
+                                break;
+                        }
                     }
                 }
 
             } catch (PDOException $ex) {
 
-                error_log('LabSync login error: ' . $ex->getMessage());
+                // Record technical error in PHP error log.
+                error_log('LabSync login database error: ' . $ex->getMessage());
 
                 $errors[] = 'Unable to sign in right now. Please try again later.';
+
+            } catch (Throwable $ex) {
+
+                error_log('LabSync login error: ' . $ex->getMessage());
+
+                $errors[] = 'An unexpected error occurred. Please try again.';
             }
         }
     }
@@ -111,18 +172,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <title>Sign In | LabSync</title>
 
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
+    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
         rel="stylesheet">
 
-    <!-- Updated CSS versions -->
-    <link rel="stylesheet" href="assets/style.css?v=13">
-    <link rel="stylesheet" href="assets/css/auth.css?v=13">
+    <!-- LabSync Stylesheets -->
+    <link rel="stylesheet" href="assets/style.css?v=14">
+    <link rel="stylesheet" href="assets/css/auth.css?v=14">
 
 </head>
 
@@ -130,16 +193,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <main class="auth-layout">
 
+        <!-- BRAND LOGO -->
         <a href="index.php" class="auth-logo" aria-label="LabSync homepage">
 
             <span class="auth-logo-icon">
                 <i class="bi bi-pc-display-horizontal"></i>
             </span>
 
-            <span class="auth-logo-name">LabSync<span>.</span></span>
+            <span class="auth-logo-name">
+                LabSync<span>.</span>
+            </span>
 
         </a>
 
+        <!-- LOGIN CARD -->
         <section class="auth-card" aria-labelledby="login-title">
 
             <div class="auth-card-heading">
@@ -148,14 +215,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="bi bi-person-circle"></i>
                 </div>
 
-                <span class="auth-kicker">COMPUTER LABORATORY SUPPORT</span>
+                <span class="auth-kicker">
+                    COMPUTER LABORATORY SUPPORT
+                </span>
 
-                <h1 id="login-title">Welcome back</h1>
+                <h1 id="login-title">
+                    Welcome back
+                </h1>
 
-                <p>Sign in to continue to your LabSync account.</p>
+                <p>
+                    Sign in to continue to your LabSync account.
+                </p>
 
             </div>
 
+            <!-- AUTHENTICATION TABS -->
             <nav class="auth-tabs" aria-label="Account access">
 
                 <a href="login.php"
@@ -170,6 +244,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             </nav>
 
+            <!-- ERROR MESSAGES -->
             <?php if (!empty($errors)): ?>
 
                 <div class="auth-message auth-message-error" role="alert">
@@ -177,23 +252,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="bi bi-exclamation-circle-fill"></i>
 
                     <div>
+
                         <?php foreach ($errors as $error): ?>
+
                             <p><?= e($error) ?></p>
+
                         <?php endforeach; ?>
+
                     </div>
 
                 </div>
 
             <?php endif; ?>
 
+            <!-- LOGIN FORM -->
             <form method="POST" action="login.php" class="auth-form">
 
                 <?= csrf_field() ?>
 
-                <!-- EMAIL -->
+                <!-- EMAIL ADDRESS -->
                 <div class="auth-field">
 
-                    <label for="email">Email Address</label>
+                    <label for="email">
+                        Email Address
+                    </label>
 
                     <div class="auth-input-wrap">
 
@@ -217,7 +299,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <!-- PASSWORD -->
                 <div class="auth-field">
 
-                    <label for="password">Password</label>
+                    <label for="password">
+                        Password
+                    </label>
 
                     <div class="auth-input-wrap">
 
@@ -238,13 +322,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             id="togglePassword"
                             aria-label="Show password"
                         >
+
                             <i class="bi bi-eye"></i>
+
                         </button>
 
                     </div>
 
                 </div>
 
+                <!-- SUBMIT BUTTON -->
                 <button type="submit" class="auth-submit">
 
                     <span>Sign In</span>
@@ -255,16 +342,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             </form>
 
+            <!-- REGISTRATION LINK -->
             <p class="auth-switch">
+
                 Don't have an account?
-                <a href="insert.php">Create an account</a>
+
+                <a href="insert.php">
+                    Create an account
+                </a>
+
             </p>
 
+            <!-- FOOTER -->
             <div class="auth-card-footer">
 
                 <span class="auth-footer-line"></span>
 
-                <p>LABSYNC · SLSU LUCENA CAMPUS</p>
+                <p>
+                    LABSYNC · SLSU LUCENA CAMPUS
+                </p>
 
                 <span class="auth-footer-line"></span>
 
@@ -272,13 +368,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         </section>
 
+        <!-- DISCLAIMER -->
         <p class="auth-disclaimer">
+
             LabSync is an academic mini-capstone project and is not an official SLSU system.
+
         </p>
 
     </main>
 
+    <!-- PASSWORD VISIBILITY -->
     <script>
+
         document.addEventListener('DOMContentLoaded', function () {
 
             const passwordInput = document.getElementById('password');
@@ -306,7 +407,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
         });
+
     </script>
 
 </body>
+
 </html>

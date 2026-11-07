@@ -1,6 +1,5 @@
 
 <?php
-
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -19,15 +18,10 @@ $department = '';
 $contactNo = '';
 $role = '';
 
-// PROCESS REGISTRATION
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
     if (!csrf_verify($_POST['csrf_token'] ?? null)) {
-
         $errors['form'] = 'Your session may have expired. Please refresh and try again.';
-
     } else {
-
         $fullName = trim((string) ($_POST['full_name'] ?? ''));
         $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         $idNumber = trim((string) ($_POST['id_number'] ?? ''));
@@ -38,8 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = (string) ($_POST['password'] ?? '');
         $confirm = (string) ($_POST['confirm_password'] ?? '');
 
-        // INPUT VALIDATION
-
+        // Input validation
         if (mb_strlen($fullName) < 2 || mb_strlen($fullName) > 150) {
             $errors['full_name'] = 'Enter your full name (2 to 150 characters).';
         }
@@ -60,16 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors['contact_no'] = 'Enter a valid contact number.';
         }
 
-        // Only these roles are recognized by the registration form.
-        $allowedRoles = ['student', 'personnel', 'admin'];
+        $allowedRoles = ['student', 'personnel'];
 
         if (!in_array($role, $allowedRoles, true)) {
             $errors['role'] = 'Please select a valid account role.';
-        }
-
-        // Public registration cannot create administrator accounts.
-        if ($role === 'admin') {
-            $errors['role'] = 'Administrator accounts must be created through a controlled setup process.';
         }
 
         if (
@@ -84,15 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors['confirm_password'] = 'Passwords do not match.';
         }
 
-        // DATABASE REGISTRATION
-
+        // Database registration
         if (empty($errors)) {
-
             try {
-
                 $pdo = db();
 
-                // Check duplicate email and ID number.
                 $check = $pdo->prepare(
                     'SELECT email, id_number
                      FROM users
@@ -108,7 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $existingUsers = $check->fetchAll(PDO::FETCH_ASSOC);
 
                 foreach ($existingUsers as $row) {
-
                     if (strtolower((string) $row['email']) === $email) {
                         $errors['email'] = 'This email address is already registered.';
                     }
@@ -118,32 +100,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                // Create account if no duplicate exists.
                 if (empty($errors)) {
-
-                    // Students are active immediately.
+                    // Student accounts are active immediately.
                     // IT Personnel accounts require administrator approval.
                     $isActive = ($role === 'student') ? 1 : 0;
 
                     $insert = $pdo->prepare(
                         'INSERT INTO users (
-                            full_name,
-                            email,
-                            password_hash,
-                            role,
-                            id_number,
-                            department,
-                            contact_no,
-                            is_active
+                            full_name, email, password_hash, role,
+                            id_number, department, contact_no, is_active
                         ) VALUES (
-                            :full_name,
-                            :email,
-                            :password_hash,
-                            :role,
-                            :id_number,
-                            :department,
-                            :contact_no,
-                            :is_active
+                            :full_name, :email, :password_hash, :role,
+                            :id_number, :department, :contact_no, :is_active
                         )'
                     );
 
@@ -158,12 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':is_active' => $isActive
                     ]);
 
-                    // Get the newly created account ID.
                     $newUserId = (int) $pdo->lastInsertId();
 
                     if ($role === 'student') {
-
-                        // Automatically log in the active student.
                         session_regenerate_id(true);
 
                         $_SESSION['user_id'] = $newUserId;
@@ -176,11 +141,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         redirect('student/dashboard.php');
 
                     } elseif ($role === 'personnel') {
-
-                        // IT Personnel must wait for administrator approval.
                         $successMessage = 'Your IT Personnel account has been submitted successfully. Please wait for administrator approval before signing in.';
 
-                        // Clear submitted form values after successful registration.
                         $fullName = '';
                         $email = '';
                         $idNumber = '';
@@ -189,147 +151,161 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $role = '';
                     }
                 }
-
             } catch (PDOException $ex) {
-
-                error_log('PCare registration error: ' . $ex->getMessage());
-
+                error_log('LabSync registration error: ' . $ex->getMessage());
                 $errors['form'] = 'We could not create your account right now. Please try again.';
             }
         }
     }
 }
 
-// FIELD ERROR DISPLAY
 function field_error(array $errors, string $key): void
 {
     if (isset($errors[$key])) {
-        echo '<p class="auth-field-error">'
+        echo '<p class="register-error">'
             . '<i class="bi bi-exclamation-circle"></i> '
             . e($errors[$key])
             . '</p>';
     }
 }
-
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <meta name="description"
-        content="Create your account to report and track computer issues at SLSU Lucena Campus.">
+    <meta name="description" content="Create your LabSync account to report and monitor computer issues at SLSU Lucena Campus.">
 
     <title>Create Account | LabSync</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-        rel="stylesheet">
-
-    <link rel="stylesheet" href="assets/style.css?v=13">
-    <link rel="stylesheet" href="assets/css/auth.css?v=14">
-
+    <link rel="stylesheet" href="/minicapstone/assets/style.css?v=18">
+    <link rel="stylesheet" href="/minicapstone/assets/css/auth.css?v=18">
+    <link rel="stylesheet" href="/minicapstone/assets/css/register.css?v=1">
 </head>
 
-<body class="auth-screen auth-register">
+<body class="register-screen">
 
-    <main class="auth-layout">
+<div class="register-layout">
 
-        <a href="index.php" class="auth-logo" aria-label="LabSync homepage">
+    <!-- LEFT: CAMPUS BRANDING PANEL -->
+    <aside class="register-visual">
 
-            <span class="auth-logo-icon">
-                <i class="bi bi-pc-display-horizontal"></i>
-            </span>
+        <div class="register-visual-overlay"></div>
 
-            <span class="auth-logo-name">LabSync<span>.</span></span>
+        <div class="register-visual-content">
 
-        </a>
+            <a href="index.php" class="register-brand">
+                <span class="register-brand-icon">
+                    <i class="bi bi-pc-display-horizontal"></i>
+                </span>
+                <span>LabSync<span class="brand-dot">.</span></span>
+            </a>
 
-        <section class="auth-card auth-register-card" aria-labelledby="register-title">
+            <div class="register-intro">
+                <span class="register-eyebrow">
+                    <span class="eyebrow-dot"></span>
+                    B204 COMPUTER LABORATORY
+                </span>
 
-            <div class="auth-card-heading">
+                <h1>
+                    Smarter Lab Management
+                    <span>Starts Here.</span>
+                </h1>
 
-                <div class="auth-card-symbol">
-                    <i class="bi bi-person-plus"></i>
+                <p>
+                    A centralized platform for reporting computer issues,
+                    tracking maintenance progress, and keeping laboratory
+                    records organized.
+                </p>
+            </div>
+
+            <div class="register-visual-info">
+
+                <div class="visual-info-item">
+                    <span class="visual-info-icon">
+                        <i class="bi bi-pc-display"></i>
+                    </span>
+                    <div>
+                        <strong>10 Computer Units</strong>
+                        <small>PC-01 to PC-10</small>
+                    </div>
                 </div>
 
-                <span class="auth-kicker">GET STARTED WITH LABSYNC</span>
-
-                <h1 id="register-title">Create your account</h1>
-
-                <p>Register to report and monitor computer issues.</p>
+                <div class="visual-info-item">
+                    <span class="visual-info-icon">
+                        <i class="bi bi-tools"></i>
+                    </span>
+                    <div>
+                        <strong>Maintenance Tracking</strong>
+                        <small>Documented issue progress</small>
+                    </div>
+                </div>
 
             </div>
 
-            <nav class="auth-tabs" aria-label="Account access">
+            <div class="register-visual-footer">
+                <span>LABSYNC</span>
+                <span>SLSU LUCENA CAMPUS</span>
+            </div>
 
-                <a href="login.php" class="auth-tab">
-                    Sign In
-                </a>
+        </div>
+    </aside>
 
-                <a href="insert.php"
-                    class="auth-tab active"
-                    aria-current="page">
-                    Sign Up
-                </a>
+    <!-- RIGHT: REGISTRATION FORM -->
+    <main class="register-main">
 
-            </nav>
+        <div class="register-top-link">
+            <span>Already have an account?</span>
+            <a href="login.php">Sign In <i class="bi bi-arrow-up-right"></i></a>
+        </div>
 
-            <?php if (isset($errors['form'])): ?>
+        <section class="register-form-container">
 
-                <div class="auth-message auth-message-error" role="alert">
-
-                    <i class="bi bi-exclamation-circle-fill"></i>
-
-                    <div>
-                        <p><?= e($errors['form']) ?></p>
-                    </div>
-
+            <div class="register-heading">
+                <div class="register-heading-icon">
+                    <i class="bi bi-person-plus"></i>
                 </div>
 
+                <span class="register-kicker">GET STARTED WITH LABSYNC</span>
+                <h2>Create your account</h2>
+                <p>Enter your details to get started with LabSync.</p>
+            </div>
+
+            <?php if (isset($errors['form'])): ?>
+                <div class="register-alert register-alert-error" role="alert">
+                    <i class="bi bi-exclamation-circle-fill"></i>
+                    <span><?= e($errors['form']) ?></span>
+                </div>
             <?php endif; ?>
 
             <?php if ($successMessage !== ''): ?>
-
-                <div class="auth-message auth-message-success" role="status">
-
+                <div class="register-alert register-alert-success" role="status">
                     <i class="bi bi-check-circle-fill"></i>
-
                     <div>
+                        <strong>Registration submitted</strong>
                         <p><?= e($successMessage) ?></p>
-                        <p><a href="login.php">Proceed to Sign In</a></p>
+                        <a href="login.php">Proceed to Sign In</a>
                     </div>
-
                 </div>
-
             <?php endif; ?>
 
-            <form method="POST"
-                action="insert.php"
-                class="auth-form auth-register-form"
-                data-once>
-
+            <form method="POST" action="insert.php" class="register-form" data-once>
                 <?= csrf_field() ?>
 
-                <div class="auth-fields-grid">
+                <div class="register-fields">
 
-                    <!-- FULL NAME -->
-                    <div class="auth-field auth-field-full">
-
+                    <div class="register-field field-full">
                         <label for="full_name">Full Name</label>
-
-                        <div class="auth-input-wrap">
+                        <div class="register-input">
                             <i class="bi bi-person"></i>
-
                             <input
                                 type="text"
                                 id="full_name"
@@ -341,19 +317,13 @@ function field_error(array $errors, string $key): void
                                 required
                             >
                         </div>
-
                         <?php field_error($errors, 'full_name'); ?>
-
                     </div>
 
-                    <!-- EMAIL -->
-                    <div class="auth-field auth-field-full">
-
+                    <div class="register-field field-full">
                         <label for="email">Email Address</label>
-
-                        <div class="auth-input-wrap">
+                        <div class="register-input">
                             <i class="bi bi-envelope"></i>
-
                             <input
                                 type="email"
                                 id="email"
@@ -365,61 +335,34 @@ function field_error(array $errors, string $key): void
                                 required
                             >
                         </div>
-
                         <?php field_error($errors, 'email'); ?>
-
                     </div>
 
-                    <!-- ACCOUNT ROLE -->
-                    <div class="auth-field auth-field-full">
-
+                    <div class="register-field field-full">
                         <label for="role">Account Role</label>
-
-                        <div class="auth-input-wrap">
+                        <div class="register-input">
                             <i class="bi bi-person-badge"></i>
-
-                            <select
-                                id="role"
-                                name="role"
-                                required
-                            >
+                            <select id="role" name="role" required>
                                 <option value="">Select your role</option>
-
-                                <option value="student"
-                                    <?= $role === 'student' ? 'selected' : '' ?>>
+                                <option value="student" <?= $role === 'student' ? 'selected' : '' ?>>
                                     Student / Staff
                                 </option>
-
-                                <option value="personnel"
-                                    <?= $role === 'personnel' ? 'selected' : '' ?>>
+                                <option value="personnel" <?= $role === 'personnel' ? 'selected' : '' ?>>
                                     IT Personnel
                                 </option>
-
-                                <option value="admin"
-                                    <?= $role === 'admin' ? 'selected' : '' ?>>
-                                    Administrator
-                                </option>
-
                             </select>
+                            <i class="bi bi-chevron-down select-chevron"></i>
                         </div>
-
-                        <small class="auth-field-hint">
+                        <small class="register-hint">
                             IT Personnel accounts require administrator approval.
-                            Administrator accounts are created through a controlled setup process.
                         </small>
-
                         <?php field_error($errors, 'role'); ?>
-
                     </div>
 
-                    <!-- ID NUMBER -->
-                    <div class="auth-field">
-
+                    <div class="register-field">
                         <label for="id_number">ID Number</label>
-
-                        <div class="auth-input-wrap">
+                        <div class="register-input">
                             <i class="bi bi-person-vcard"></i>
-
                             <input
                                 type="text"
                                 id="id_number"
@@ -430,19 +373,13 @@ function field_error(array $errors, string $key): void
                                 required
                             >
                         </div>
-
                         <?php field_error($errors, 'id_number'); ?>
-
                     </div>
 
-                    <!-- CONTACT NUMBER -->
-                    <div class="auth-field">
-
+                    <div class="register-field">
                         <label for="contact_no">Contact Number</label>
-
-                        <div class="auth-input-wrap">
+                        <div class="register-input">
                             <i class="bi bi-telephone"></i>
-
                             <input
                                 type="tel"
                                 id="contact_no"
@@ -454,19 +391,13 @@ function field_error(array $errors, string $key): void
                                 required
                             >
                         </div>
-
                         <?php field_error($errors, 'contact_no'); ?>
-
                     </div>
 
-                    <!-- DEPARTMENT -->
-                    <div class="auth-field auth-field-full">
-
+                    <div class="register-field field-full">
                         <label for="department">Department</label>
-
-                        <div class="auth-input-wrap">
+                        <div class="register-input">
                             <i class="bi bi-building"></i>
-
                             <input
                                 type="text"
                                 id="department"
@@ -477,19 +408,13 @@ function field_error(array $errors, string $key): void
                                 required
                             >
                         </div>
-
                         <?php field_error($errors, 'department'); ?>
-
                     </div>
 
-                    <!-- PASSWORD -->
-                    <div class="auth-field">
-
+                    <div class="register-field">
                         <label for="password">Password</label>
-
-                        <div class="auth-input-wrap">
+                        <div class="register-input">
                             <i class="bi bi-lock"></i>
-
                             <input
                                 type="password"
                                 id="password"
@@ -498,29 +423,22 @@ function field_error(array $errors, string $key): void
                                 placeholder="Create password"
                                 required
                             >
-
                             <button
                                 type="button"
-                                class="auth-password-toggle"
+                                class="register-password-toggle"
                                 data-toggle-password="password"
                                 aria-label="Show password"
                             >
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
-
                         <?php field_error($errors, 'password'); ?>
-
                     </div>
 
-                    <!-- CONFIRM PASSWORD -->
-                    <div class="auth-field">
-
+                    <div class="register-field">
                         <label for="confirm_password">Confirm Password</label>
-
-                        <div class="auth-input-wrap">
+                        <div class="register-input">
                             <i class="bi bi-lock-fill"></i>
-
                             <input
                                 type="password"
                                 id="confirm_password"
@@ -529,57 +447,53 @@ function field_error(array $errors, string $key): void
                                 placeholder="Repeat password"
                                 required
                             >
-
                             <button
                                 type="button"
-                                class="auth-password-toggle"
+                                class="register-password-toggle"
                                 data-toggle-password="confirm_password"
                                 aria-label="Show password"
                             >
                                 <i class="bi bi-eye"></i>
                             </button>
                         </div>
-
                         <?php field_error($errors, 'confirm_password'); ?>
-
                     </div>
 
                 </div>
 
-                <button type="submit" class="auth-submit">
-
+                <button type="submit" class="register-submit">
                     <span>Create Account</span>
-
                     <i class="bi bi-arrow-right"></i>
-
                 </button>
 
             </form>
 
-            <p class="auth-switch">
-                Already have an account?
-                <a href="login.php">Sign In</a>
+            <p class="register-bottom-text">
+                By creating an account, you agree to use LabSync responsibly
+                for B204 laboratory-related concerns.
             </p>
 
-            <div class="auth-card-footer">
-
-                <span class="auth-footer-line"></span>
-
-                <p>LABSYNC · SLSU LUCENA CAMPUS</p>
-
-                <span class="auth-footer-line"></span>
-
+            <div class="register-divider">
+                <span></span>
+                <small>LABSYNC · SLSU LUCENA CAMPUS</small>
+                <span></span>
             </div>
+
+            <a href="index.php" class="register-back">
+                <i class="bi bi-arrow-left"></i> Back to Homepage
+            </a>
 
         </section>
 
-        <p class="auth-disclaimer">
+        <p class="register-disclaimer">
             LabSync is an academic mini-capstone project and is not an official SLSU system.
         </p>
 
     </main>
 
-    <script src="assets/js/main.js" defer></script>
+</div>
+
+<script src="/minicapstone/assets/js/main.js" defer></script>
 
 </body>
 </html>
