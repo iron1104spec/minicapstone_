@@ -186,9 +186,10 @@ function field_error(array $errors, string $key): void
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
-    <link rel="stylesheet" href="/minicapstone/assets/style.css?v=18">
-    <link rel="stylesheet" href="/minicapstone/assets/css/auth.css?v=18">
-    <link rel="stylesheet" href="/minicapstone/assets/css/register.css?v=1">
+    <!-- CSS FILES -->
+    <link rel="stylesheet" href="/minicapstone_/assets/style.css?v=18">
+    <link rel="stylesheet" href="/minicapstone_/assets/css/auth.css?v=18">
+    <link rel="stylesheet" href="/minicapstone_/assets/css/register.css?v=1">
 </head>
 
 <body class="register-screen">
@@ -493,7 +494,8 @@ function field_error(array $errors, string $key): void
 
 </div>
 
-<script src="/minicapstone/assets/js/main.js" defer></script>
+<!-- JAVASCRIPT -->
+<script src="/minicapstone_/assets/js/main.js" defer></script>
 
 </body>
 </html>
