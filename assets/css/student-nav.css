@@ -1,0 +1,85 @@
+/* assets/css/student-nav.css */
+
+.labsync-navbar {
+    background: #245B54;
+    font-family: 'Inter', sans-serif;
+    padding: 13px 0;
+}
+
+.labsync-navbar .navbar-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #FFFFFF;
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -.7px;
+}
+
+.labsync-navbar .brand-icon {
+    width: 35px;
+    height: 35px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: rgba(255,255,255,.14);
+    color: #FFFFFF;
+    font-size: 17px;
+}
+
+.labsync-navbar .nav-link {
+    padding: 10px 13px !important;
+    color: rgba(255,255,255,.76);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: background .2s ease, color .2s ease;
+}
+
+.labsync-navbar .nav-link:hover,
+.labsync-navbar .nav-link.active {
+    background: rgba(255,255,255,.13);
+    color: #FFFFFF;
+}
+
+.labsync-navbar .user-name {
+    color: #FFFFFF;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.labsync-navbar .logout-button {
+    padding: 8px 13px;
+    border: 1px solid rgba(255,255,255,.45);
+    border-radius: 8px;
+    color: #FFFFFF;
+    background: transparent;
+    font-size: 11px;
+    font-weight: 700;
+    transition: background .2s ease;
+}
+
+.labsync-navbar .logout-button:hover {
+    background: rgba(255,255,255,.13);
+}
+
+.labsync-navbar .navbar-toggler {
+    border-color: rgba(255,255,255,.3);
+    box-shadow: none;
+}
+
+@media (max-width: 991px) {
+    .labsync-navbar .navbar-collapse {
+        padding-top: 15px;
+    }
+
+    .labsync-navbar .nav-link {
+        margin-bottom: 3px;
+    }
+
+    .labsync-navbar .user-section {
+        align-items: flex-start !important;
+        padding-top: 14px;
+        border-top: 1px solid rgba(255,255,255,.15);
+    }
+}

@@ -1,0 +1,130 @@
+/* assets/css/personnel-maintenance-records.css */
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #F7F8F6;
+    color: #303C39;
+}
+
+.navbar {
+    background: #245B54;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.navbar .nav-link {
+    color: rgba(255,255,255,.82);
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link.active {
+    color: #FFFFFF;
+}
+
+.page-heading {
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.content-card {
+    background: #FFFFFF;
+    border: 1px solid #E8ECE9;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(36, 91, 84, 0.04);
+}
+
+.section-title {
+    font-weight: 700;
+    font-size: 17px;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #46534F;
+}
+
+.form-control,
+.form-select {
+    border-color: #DDE5E1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #4E968B;
+    box-shadow: 0 0 0 3px rgba(78, 150, 139, 0.12);
+}
+
+.btn-pcare {
+    background: #4E968B;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-weight: 600;
+}
+
+.btn-pcare:hover {
+    background: #245B54;
+    color: #FFFFFF;
+}
+
+.btn-view {
+    background: #E5F0ED;
+    color: #245B54;
+    border: 1px solid #D5E7E1;
+    border-radius: 7px;
+    padding: 6px 11px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.btn-view:hover {
+    background: #245B54;
+    color: #FFFFFF;
+}
+
+.table thead th {
+    background: #F7F8F6;
+    color: #66736E;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    padding: 14px;
+    white-space: nowrap;
+}
+
+.table tbody td {
+    padding: 14px;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.status-badge {
+    display: inline-block;
+    background: #E5F0ED;
+    color: #245B54;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.empty-state {
+    padding: 40px 15px;
+    text-align: center;
+    color: #77827D;
+}
+
+.empty-state i {
+    font-size: 35px;
+    color: #9BBDB5;
+}

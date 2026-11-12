@@ -1,0 +1,95 @@
+/* assets/css/personnel-maintenance-details.css */
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #F7F8F6;
+    color: #303C39;
+}
+
+.navbar {
+    background: #245B54;
+}
+
+.navbar-brand {
+    font-weight: 700;
+}
+
+.page-heading {
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.content-card {
+    background: #FFFFFF;
+    border: 1px solid #E8ECE9;
+    border-radius: 14px;
+    box-shadow: 0 4px 18px rgba(36, 91, 84, 0.04);
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.detail-label {
+    color: #78847F;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    margin-bottom: 6px;
+}
+
+.detail-value {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+.status-badge {
+    display: inline-block;
+    background: #E5F0ED;
+    color: #245B54;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.text-section {
+    background: #F7F8F6;
+    border: 1px solid #E8ECE9;
+    border-radius: 10px;
+    padding: 18px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    line-height: 1.8;
+}
+
+.btn-pcare {
+    background: #4E968B;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-weight: 600;
+}
+
+.btn-pcare:hover {
+    background: #245B54;
+    color: #FFFFFF;
+}
+
+.btn-outline-pcare {
+    border: 1px solid #4E968B;
+    color: #245B54;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.btn-outline-pcare:hover {
+    background: #E5F0ED;
+    color: #245B54;
+}

@@ -1,0 +1,71 @@
+/* assets/css/personnel-issue-history.css */
+
+body {
+    background: #F7F8F6;
+    color: #303C39;
+    font-family: Arial, sans-serif;
+}
+
+.main-content {
+    padding: 35px;
+}
+
+.page-title {
+    color: #245B54;
+    font-weight: 700;
+}
+
+.history-card {
+    background: #FFFFFF;
+    border: 1px solid #E7ECE9;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.history-count {
+    background: #E5F0ED;
+    color: #245B54;
+    padding: 20px;
+    border-radius: 14px;
+}
+
+.table th {
+    color: #64736E;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 16px;
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 16px;
+    vertical-align: middle;
+}
+
+.reference-link {
+    color: #245B54;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.reference-link:hover {
+    text-decoration: underline;
+}
+
+.filter-input {
+    border: 1px solid #DEE5E1;
+    border-radius: 9px;
+    padding: 10px 13px;
+}
+
+.filter-input:focus {
+    border-color: #4E968B;
+    box-shadow: 0 0 0 0.2rem rgba(78, 150, 139, 0.12);
+}
+
+@media (max-width: 768px) {
+    .main-content {
+        padding: 20px 14px;
+    }
+}

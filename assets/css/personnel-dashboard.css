@@ -1,0 +1,17 @@
+/* assets/css/personnel-dashboard.css */
+
+.bg-brand-green {
+    background-color: #245B54 !important;
+}
+
+/* Optional: Kung gusto mong lagyan ng konting custom styling ang cards o table para hindi masyadong plain */
+.card {
+    border-radius: 12px;
+}
+
+.table th {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64736E;
+}

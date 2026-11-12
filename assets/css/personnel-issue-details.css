@@ -1,0 +1,17 @@
+/* assets/css/personnel-issue-details.css */
+
+/* Custom brand color para sa navbar */
+.bg-brand-green {
+    background-color: #245B54 !important;
+}
+
+/* Para mapanatili ang format ng text sa description */
+.text-pre-wrap {
+    white-space: pre-wrap;
+}
+
+/* Limitasyon ng laki ng litrato para hindi sumobra sa card */
+.issue-photo {
+    max-height: 350px;
+    object-fit: contain;
+}

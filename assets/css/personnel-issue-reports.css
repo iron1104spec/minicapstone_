@@ -1,0 +1,11 @@
+/* assets/css/personnel-issue-reports.css */
+
+/* Custom brand color para sa navbar */
+.bg-brand-green {
+    background-color: #245B54 !important;
+}
+
+/* Optional: Konting adjustment para sa table links */
+.table a.text-success:hover {
+    text-decoration: underline !important;
+}
