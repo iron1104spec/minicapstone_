@@ -21,7 +21,7 @@ require_once __DIR__ . '/dashboard-logic.php';
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
     <!-- External CSS -->
-    <link rel="stylesheet" href="../assets/css/student-dashboard.css">
+    <link rel="stylesheet" href="../assets/css/student-dashboard.css?v=2">
 </head>
 
 <body>

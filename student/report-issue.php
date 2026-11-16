@@ -17,7 +17,7 @@ require_once __DIR__ . '/report-issue-logic.php';
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- External CSS -->
-    <link rel="stylesheet" href="../assets/css/student-report-issue.css">
+     <link rel="stylesheet" href="../assets/css/student-report-issue.css?v=3">
 </head>
 
 <body>

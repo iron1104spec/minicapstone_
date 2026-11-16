@@ -8,7 +8,6 @@ require_role('personnel');
 
 $pdo = db();
 
-// Get all registered computer units
 $stmt = $pdo->query("
     SELECT
         unit_id,
