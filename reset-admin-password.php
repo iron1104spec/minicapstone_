@@ -1,9 +1,12 @@
 
 <?php
 
-require_once __DIR__ . '/config/db.php';
+require_once _DIR_ . '/config/db.php';
 
 $newPassword = 'LabSyncAdmin2026!';
+$adminEmail = 'admin@labsync.local';
+
+$hash = password_hash($newPassword, PASSWORD_DEFAULT);
 
 $stmt = $pdo->prepare("
     UPDATE users
@@ -12,11 +15,20 @@ $stmt = $pdo->prepare("
     AND role = 'admin'
 ");
 
-$stmt->execute([
-    password_hash($newPassword, PASSWORD_DEFAULT),
-    'pcare.admin@example.com'
-]);
+$stmt->execute([$hash, $adminEmail]);
 
-echo $stmt->rowCount() > 0
-    ? 'Admin password successfully reset!'
-    : 'No account updated. Check the admin account.';
+$check = $pdo->prepare("
+    SELECT password_hash
+    FROM users
+    WHERE email = ?
+    AND role = 'admin'
+");
+
+$check->execute([$adminEmail]);
+$user = $check->fetch(PDO::FETCH_ASSOC);
+
+if ($user && password_verify($newPassword, $user['password_hash'])) {
+    echo "SUCCESS! Admin password successfully reset.";
+} else {
+    echo "FAILED! Admin password was not updated.";
+}
