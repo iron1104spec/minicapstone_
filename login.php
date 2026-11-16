@@ -5,6 +5,10 @@
 // LABSYNC - LOGIN
 // ==========================================
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/config/db.php';
@@ -18,23 +22,19 @@ $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // Verify CSRF token.
     if (!csrf_verify($_POST['csrf_token'] ?? null)) {
 
         $errors[] = 'Your session may have expired. Please refresh and try again.';
 
     } else {
 
-        // Get submitted credentials.
         $email = strtolower(trim((string) ($_POST['email'] ?? '')));
         $password = (string) ($_POST['password'] ?? '');
 
-        // Validate email.
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Please enter a valid email address.';
         }
 
-        // Validate password.
         if ($password === '') {
             $errors[] = 'Please enter your password.';
         }
@@ -47,7 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
 
-                // Use the $pdo connection from config/db.php.
                 $stmt = $pdo->prepare("
                     SELECT
                         user_id,
@@ -67,20 +66,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                // Check whether the account exists.
                 if (!$user) {
 
                     $errors[] = 'Invalid email or password.';
 
                 } else {
 
-                    // Verify the submitted password against its stored hash.
                     $passwordIsValid = password_verify(
                         $password,
                         $user['password_hash']
                     );
 
-                    // Check account activation.
                     $accountIsActive = (int) $user['is_active'] === 1;
 
                     if (!$passwordIsValid || !$accountIsActive) {
@@ -99,25 +95,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     } else {
 
-                        // ==========================================
                         // LOGIN SUCCESSFUL
-                        // ==========================================
 
-                        // Regenerate session ID for security.
                         session_regenerate_id(true);
 
-                        // Store authenticated user information.
                         $_SESSION['user_id'] = (int) $user['user_id'];
                         $_SESSION['full_name'] = $user['full_name'];
                         $_SESSION['email'] = $user['email'];
                         $_SESSION['role'] = $user['role'];
 
-                        // Remove registration-only session flag.
                         unset($_SESSION['registration_completed']);
 
-                        // ==========================================
                         // ROLE-BASED REDIRECTION
-                        // ==========================================
 
                         switch ($user['role']) {
 
@@ -142,7 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             } catch (PDOException $ex) {
 
-                // Record technical error in PHP error log.
                 error_log('LabSync login database error: ' . $ex->getMessage());
 
                 $errors[] = 'Unable to sign in right now. Please try again later.';
@@ -172,208 +160,260 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <title>Sign In | LabSync</title>
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
         rel="stylesheet">
 
-    <!-- LabSync Stylesheets -->
-    <link rel="stylesheet" href="assets/style.css?v=14">
-    <link rel="stylesheet" href="assets/css/auth.css?v=14">
+    <!-- STYLESHEETS -->
+    <link rel="stylesheet" href="assets/css/style.css?v=20">
+    <link rel="stylesheet" href="assets/css/login.css?v=2">
 
 </head>
 
-<body class="auth-screen auth-login">
+<body class="labsync-login">
 
-    <main class="auth-layout">
+    <main class="login-page">
 
-        <!-- BRAND LOGO -->
-        <a href="index.php" class="auth-logo" aria-label="LabSync homepage">
+        <!-- LEFT BRANDING -->
+        <section class="login-visual">
 
-            <span class="auth-logo-icon">
-                <i class="bi bi-pc-display-horizontal"></i>
-            </span>
+            <a href="index.php" class="login-brand">
 
-            <span class="auth-logo-name">
-                LabSync<span>.</span>
-            </span>
-
-        </a>
-
-        <!-- LOGIN CARD -->
-        <section class="auth-card" aria-labelledby="login-title">
-
-            <div class="auth-card-heading">
-
-                <div class="auth-card-symbol">
-                    <i class="bi bi-person-circle"></i>
-                </div>
-
-                <span class="auth-kicker">
-                    COMPUTER LABORATORY SUPPORT
+                <span class="login-brand-icon">
+                    <i class="bi bi-pc-display-horizontal"></i>
                 </span>
 
-                <h1 id="login-title">
-                    Welcome back
+                <span>
+                    LabSync<span class="login-brand-dot">.</span>
+                </span>
+
+            </a>
+
+            <div class="login-intro">
+
+                <span class="login-eyebrow">
+                    <span></span>
+                    B204 COMPUTER LABORATORY
+                </span>
+
+                <h1>
+                    Smarter Lab Management
+                    <span>Starts Here.</span>
                 </h1>
 
                 <p>
-                    Sign in to continue to your LabSync account.
+                    A centralized platform for reporting computer issues,
+                    tracking maintenance progress, and keeping laboratory
+                    records organized.
                 </p>
 
             </div>
 
-            <!-- AUTHENTICATION TABS -->
-            <nav class="auth-tabs" aria-label="Account access">
+            <div class="login-visual-info">
 
-                <a href="login.php"
-                    class="auth-tab active"
-                    aria-current="page">
-                    Sign In
-                </a>
+                <div class="login-info-item">
 
-                <a href="insert.php" class="auth-tab">
-                    Sign Up
-                </a>
-
-            </nav>
-
-            <!-- ERROR MESSAGES -->
-            <?php if (!empty($errors)): ?>
-
-                <div class="auth-message auth-message-error" role="alert">
-
-                    <i class="bi bi-exclamation-circle-fill"></i>
+                    <i class="bi bi-pc-display"></i>
 
                     <div>
-
-                        <?php foreach ($errors as $error): ?>
-
-                            <p><?= e($error) ?></p>
-
-                        <?php endforeach; ?>
-
+                        <strong>10 Computer Units</strong>
+                        <small>PC-01 to PC-10</small>
                     </div>
 
                 </div>
 
-            <?php endif; ?>
+                <div class="login-info-item">
 
-            <!-- LOGIN FORM -->
-            <form method="POST" action="login.php" class="auth-form">
+                    <i class="bi bi-tools"></i>
 
-                <?= csrf_field() ?>
-
-                <!-- EMAIL ADDRESS -->
-                <div class="auth-field">
-
-                    <label for="email">
-                        Email Address
-                    </label>
-
-                    <div class="auth-input-wrap">
-
-                        <i class="bi bi-envelope"></i>
-
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            value="<?= e($email) ?>"
-                            placeholder="name@example.com"
-                            autocomplete="username"
-                            maxlength="150"
-                            required
-                        >
-
+                    <div>
+                        <strong>Maintenance Tracking</strong>
+                        <small>Documented issue progress</small>
                     </div>
 
                 </div>
 
-                <!-- PASSWORD -->
-                <div class="auth-field">
+            </div>
 
-                    <label for="password">
-                        Password
-                    </label>
+            <div class="login-visual-footer">
+                <span>LABSYNC</span>
+                <span>SLSU LUCENA CAMPUS</span>
+            </div>
 
-                    <div class="auth-input-wrap">
+        </section>
 
-                        <i class="bi bi-lock"></i>
+        <!-- RIGHT LOGIN PANEL -->
+        <section class="login-panel">
 
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            placeholder="Enter your password"
-                            autocomplete="current-password"
-                            required
-                        >
+            <div class="login-panel-top">
 
-                        <button
-                            type="button"
-                            class="auth-password-toggle"
-                            id="togglePassword"
-                            aria-label="Show password"
-                        >
-
-                            <i class="bi bi-eye"></i>
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-                <!-- SUBMIT BUTTON -->
-                <button type="submit" class="auth-submit">
-
-                    <span>Sign In</span>
-
-                    <i class="bi bi-arrow-right"></i>
-
-                </button>
-
-            </form>
-
-            <!-- REGISTRATION LINK -->
-            <p class="auth-switch">
-
-                Don't have an account?
+                <span>LABSYNC ACCOUNT</span>
 
                 <a href="insert.php">
                     Create an account
                 </a>
 
-            </p>
+            </div>
 
-            <!-- FOOTER -->
-            <div class="auth-card-footer">
+            <div class="login-form-container">
 
-                <span class="auth-footer-line"></span>
+                <div class="login-heading">
 
-                <p>
-                    LABSYNC · SLSU LUCENA CAMPUS
+                    <div class="login-heading-icon">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+
+                    <span class="login-kicker">
+                        COMPUTER LABORATORY SUPPORT
+                    </span>
+
+                    <h2>Welcome back</h2>
+
+                    <p>
+                        Sign in to continue to your LabSync account.
+                    </p>
+
+                </div>
+
+                <!-- ERROR MESSAGES -->
+                <?php if (!empty($errors)): ?>
+
+                    <div class="login-alert" role="alert">
+
+                        <i class="bi bi-exclamation-circle-fill"></i>
+
+                        <div>
+
+                            <?php foreach ($errors as $error): ?>
+
+                                <p><?= e($error) ?></p>
+
+                            <?php endforeach; ?>
+
+                        </div>
+
+                    </div>
+
+                <?php endif; ?>
+
+                <!-- LOGIN FORM -->
+                <form method="POST" action="login.php" class="login-form">
+
+                    <?= csrf_field() ?>
+
+                    <!-- EMAIL -->
+                    <div class="login-field">
+
+                        <label for="email">
+                            Email Address
+                        </label>
+
+                        <div class="login-input-wrap">
+
+                            <i class="bi bi-envelope"></i>
+
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                value="<?= e($email) ?>"
+                                placeholder="name@example.com"
+                                autocomplete="username"
+                                maxlength="150"
+                                required
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <!-- PASSWORD -->
+                    <div class="login-field">
+
+                        <label for="password">
+                            Password
+                        </label>
+
+                        <div class="login-input-wrap">
+
+                            <i class="bi bi-lock"></i>
+
+                            <input
+                                type="password"
+                                id="password"
+                                name="password"
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            >
+
+                            <button
+                                type="button"
+                                class="login-password-toggle"
+                                id="togglePassword"
+                                aria-label="Show password"
+                            >
+
+                                <i class="bi bi-eye"></i>
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <!-- SUBMIT -->
+                    <button type="submit" class="login-submit">
+
+                        <span>Sign In</span>
+
+                        <i class="bi bi-arrow-right"></i>
+
+                    </button>
+
+                </form>
+
+                <!-- REGISTRATION -->
+                <p class="login-register-link">
+
+                    Don't have an account?
+
+                    <a href="insert.php">
+                        Create an account
+                    </a>
+
                 </p>
 
-                <span class="auth-footer-line"></span>
+                <!-- FOOTER -->
+                <div class="login-divider">
+
+                    <span></span>
+
+                    <small>
+                        LABSYNC · SLSU LUCENA CAMPUS
+                    </small>
+
+                    <span></span>
+
+                </div>
+
+                <a href="index.php" class="login-back">
+                    <i class="bi bi-arrow-left"></i>
+                    Back to Homepage
+                </a>
 
             </div>
 
+            <p class="login-disclaimer">
+                LabSync is an academic mini-capstone project and is not an official SLSU system.
+            </p>
+
         </section>
-
-        <!-- DISCLAIMER -->
-        <p class="auth-disclaimer">
-
-            LabSync is an academic mini-capstone project and is not an official SLSU system.
-
-        </p>
 
     </main>
 
@@ -411,5 +451,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
 
 </body>
-
 </html>

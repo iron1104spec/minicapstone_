@@ -14,6 +14,10 @@
     --reg-white: #FFFFFF;
 }
 
+/* =========================================
+   GLOBAL
+   ========================================= */
+
 body.register-screen {
     margin: 0;
     min-height: 100vh;
@@ -43,7 +47,6 @@ body.register-screen {
     display: flex;
     min-height: 100vh;
     overflow: hidden;
-
     background-color: var(--reg-deep);
     background-image: url('../images/Lucena.png');
     background-size: cover;
@@ -54,13 +57,12 @@ body.register-screen {
 .register-visual-overlay {
     position: absolute;
     inset: 0;
-    background:
-        linear-gradient(
-            180deg,
-            rgba(25, 72, 64, 0.76) 0%,
-            rgba(36, 91, 84, 0.82) 48%,
-            rgba(20, 52, 47, 0.94) 100%
-        );
+    background: linear-gradient(
+        180deg,
+        rgba(25, 72, 64, 0.76) 0%,
+        rgba(36, 91, 84, 0.82) 48%,
+        rgba(20, 52, 47, 0.94) 100%
+    );
 }
 
 .register-visual-content {
@@ -70,7 +72,7 @@ body.register-screen {
     flex-direction: column;
     width: 100%;
     min-height: 100vh;
-    padding: 42px clamp(30px, 5vw, 76px);
+    padding: 35px clamp(25px, 5vw, 76px);
     color: var(--reg-white);
 }
 
@@ -108,16 +110,16 @@ body.register-screen {
 .register-intro {
     max-width: 540px;
     margin-top: auto;
-    margin-bottom: 42px;
+    margin-bottom: 30px;
 }
 
 .register-eyebrow {
     display: inline-flex;
     align-items: center;
     gap: 9px;
-    margin-bottom: 22px;
+    margin-bottom: 18px;
     color: #D7EAE4;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 1.5px;
 }
@@ -131,9 +133,9 @@ body.register-screen {
 }
 
 .register-intro h1 {
-    margin: 0 0 20px;
+    margin: 0 0 17px;
     color: #FFFFFF;
-    font-size: clamp(34px, 4vw, 55px);
+    font-size: clamp(32px, 3.8vw, 52px);
     line-height: 1.12;
     font-weight: 800;
     letter-spacing: -2px;
@@ -148,25 +150,25 @@ body.register-screen {
     max-width: 460px;
     margin: 0;
     color: rgba(255,255,255,0.82);
-    font-size: 15px;
-    line-height: 1.85;
+    font-size: 14px;
+    line-height: 1.8;
 }
 
 .register-visual-info {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
-    margin-bottom: 35px;
+    gap: 12px;
+    margin-bottom: 25px;
 }
 
 .visual-info-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    min-width: 210px;
-    padding: 14px 16px;
+    gap: 11px;
+    min-width: 190px;
+    padding: 12px 14px;
     border: 1px solid rgba(255,255,255,0.19);
-    border-radius: 13px;
+    border-radius: 12px;
     background: rgba(255,255,255,0.10);
     backdrop-filter: blur(8px);
 }
@@ -174,12 +176,12 @@ body.register-screen {
 .visual-info-icon {
     display: grid;
     place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
     background: rgba(255,255,255,0.15);
     color: #D5EDE4;
-    font-size: 18px;
+    font-size: 17px;
 }
 
 .visual-info-item strong,
@@ -189,24 +191,24 @@ body.register-screen {
 
 .visual-info-item strong {
     color: #FFFFFF;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
 }
 
 .visual-info-item small {
     margin-top: 4px;
     color: rgba(255,255,255,0.70);
-    font-size: 10px;
+    font-size: 9px;
 }
 
 .register-visual-footer {
     display: flex;
     justify-content: space-between;
     gap: 15px;
-    padding-top: 20px;
+    padding-top: 17px;
     border-top: 1px solid rgba(255,255,255,0.20);
     color: rgba(255,255,255,0.65);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     letter-spacing: 1.2px;
 }
@@ -221,19 +223,20 @@ body.register-screen {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    min-width: 0;
     min-height: 100vh;
-    padding: 78px 55px 45px;
+    padding: 65px 45px 25px;
     background: var(--reg-white);
 }
 
 .register-top-link {
     position: absolute;
-    top: 30px;
-    right: 42px;
+    top: 25px;
+    right: 35px;
     display: flex;
     align-items: center;
     gap: 7px;
-    font-size: 12px;
+    font-size: 11px;
     color: var(--reg-muted);
 }
 
@@ -254,43 +257,43 @@ body.register-screen {
 }
 
 .register-heading {
-    margin-bottom: 25px;
+    margin-bottom: 17px;
 }
 
 .register-heading-icon {
     display: grid;
     place-items: center;
-    width: 45px;
-    height: 45px;
-    margin-bottom: 17px;
-    border-radius: 13px;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 11px;
+    border-radius: 11px;
     background: var(--reg-mint);
     color: var(--reg-deep);
-    font-size: 20px;
+    font-size: 18px;
 }
 
 .register-kicker {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     color: var(--reg-primary);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
-    letter-spacing: 1.5px;
+    letter-spacing: 1.4px;
 }
 
 .register-heading h2 {
-    margin: 0 0 8px;
+    margin: 0 0 5px;
     color: var(--reg-text);
-    font-size: clamp(25px, 3vw, 32px);
+    font-size: clamp(23px, 2.5vw, 30px);
     font-weight: 800;
-    letter-spacing: -1.2px;
+    letter-spacing: -1px;
 }
 
 .register-heading p {
     margin: 0;
     color: var(--reg-muted);
-    font-size: 13px;
-    line-height: 1.7;
+    font-size: 12px;
+    line-height: 1.6;
 }
 
 /* =========================================
@@ -300,7 +303,7 @@ body.register-screen {
 .register-fields {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 16px 14px;
+    gap: 11px 13px;
 }
 
 .register-field {
@@ -313,9 +316,9 @@ body.register-screen {
 
 .register-field label {
     display: block;
-    margin-bottom: 7px;
+    margin-bottom: 5px;
     color: var(--reg-text);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
 }
 
@@ -323,10 +326,10 @@ body.register-screen {
     position: relative;
     display: flex;
     align-items: center;
-    min-height: 47px;
-    padding: 0 13px;
+    min-height: 40px;
+    padding: 0 11px;
     border: 1px solid var(--reg-border);
-    border-radius: 9px;
+    border-radius: 8px;
     background: #FFFFFF;
     transition: border-color .2s ease, box-shadow .2s ease;
 }
@@ -338,22 +341,22 @@ body.register-screen {
 
 .register-input > i:first-child {
     flex-shrink: 0;
-    margin-right: 11px;
+    margin-right: 9px;
     color: #91A29C;
-    font-size: 15px;
+    font-size: 14px;
 }
 
 .register-input input,
 .register-input select {
     width: 100%;
     min-width: 0;
-    height: 45px;
+    height: 38px;
     border: 0;
     outline: 0;
     background: transparent;
     color: var(--reg-text);
     font-family: inherit;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
 }
 
@@ -379,10 +382,10 @@ body.register-screen {
 
 .register-input .select-chevron {
     position: absolute;
-    right: 14px;
+    right: 12px;
     margin: 0;
     color: #91A29C;
-    font-size: 12px;
+    font-size: 11px;
     pointer-events: none;
 }
 
@@ -390,8 +393,8 @@ body.register-screen {
     display: grid;
     flex-shrink: 0;
     place-items: center;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     border: 0;
     background: transparent;
     color: #8A9993;
@@ -404,24 +407,24 @@ body.register-screen {
 
 .register-hint {
     display: block;
-    margin-top: 7px;
+    margin-top: 5px;
     color: var(--reg-muted);
-    font-size: 10px;
-    line-height: 1.5;
+    font-size: 9px;
+    line-height: 1.4;
 }
 
 .register-error {
     display: flex;
     align-items: flex-start;
     gap: 5px;
-    margin: 7px 0 0;
+    margin: 5px 0 0;
     color: #C44747;
-    font-size: 10px;
-    line-height: 1.5;
+    font-size: 9px;
+    line-height: 1.4;
 }
 
 /* =========================================
-   SUBMIT BUTTON AND NOTIFICATIONS
+   SUBMIT BUTTON
    ========================================= */
 
 .register-submit {
@@ -430,14 +433,14 @@ body.register-screen {
     align-items: center;
     gap: 12px;
     width: 100%;
-    min-height: 49px;
-    margin-top: 23px;
+    min-height: 43px;
+    margin-top: 15px;
     border: 0;
-    border-radius: 9px;
+    border-radius: 8px;
     background: var(--reg-deep);
     color: #FFFFFF;
     font-family: inherit;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
     transition: background .2s ease, transform .2s ease;
@@ -449,23 +452,27 @@ body.register-screen {
 }
 
 .register-submit i {
-    font-size: 16px;
+    font-size: 15px;
 }
+
+/* =========================================
+   ALERTS
+   ========================================= */
 
 .register-alert {
     display: flex;
     align-items: flex-start;
-    gap: 11px;
-    margin-bottom: 18px;
-    padding: 13px 15px;
-    border-radius: 9px;
-    font-size: 11px;
-    line-height: 1.6;
+    gap: 10px;
+    margin-bottom: 13px;
+    padding: 11px 13px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 1.5;
 }
 
 .register-alert > i {
     margin-top: 1px;
-    font-size: 16px;
+    font-size: 15px;
 }
 
 .register-alert-error {
@@ -481,7 +488,7 @@ body.register-screen {
 }
 
 .register-alert p {
-    margin: 5px 0;
+    margin: 4px 0;
 }
 
 .register-alert a {
@@ -489,19 +496,23 @@ body.register-screen {
     font-weight: 700;
 }
 
+/* =========================================
+   FOOTER CONTENT
+   ========================================= */
+
 .register-bottom-text {
-    margin: 15px 0 20px;
+    margin: 10px 0 12px;
     color: var(--reg-muted);
-    font-size: 10px;
-    line-height: 1.7;
+    font-size: 9px;
+    line-height: 1.5;
     text-align: center;
 }
 
 .register-divider {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-top: 20px;
+    gap: 10px;
+    margin-top: 12px;
 }
 
 .register-divider span {
@@ -512,7 +523,7 @@ body.register-screen {
 
 .register-divider small {
     color: #9AA6A0;
-    font-size: 9px;
+    font-size: 8px;
     font-weight: 700;
     letter-spacing: 1px;
 }
@@ -522,9 +533,9 @@ body.register-screen {
     justify-content: center;
     align-items: center;
     gap: 7px;
-    margin-top: 19px;
+    margin-top: 12px;
     color: var(--reg-muted);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     text-decoration: none;
 }
@@ -535,29 +546,124 @@ body.register-screen {
 
 .register-disclaimer {
     max-width: 450px;
-    margin: 25px 0 0;
+    margin: 12px 0 0;
     color: #9AA6A0;
-    font-size: 9px;
-    line-height: 1.6;
+    font-size: 8px;
+    line-height: 1.5;
     text-align: center;
 }
 
 /* =========================================
-   RESPONSIVE
+   DESKTOP: NO PAGE SCROLLING
    ========================================= */
 
-@media (max-width: 1050px) {
+@media (min-width: 761px) {
+
+    html,
+    body.register-screen {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .register-layout {
+        width: 100%;
+        height: 100vh;
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .register-visual,
+    .register-visual-content,
+    .register-main {
+        height: 100%;
+        min-height: 0;
+    }
+
+    .register-main {
+        overflow: hidden;
+    }
+
+    .register-form-container {
+        flex-shrink: 1;
+    }
+}
+
+/* =========================================
+   SHORT DESKTOP SCREENS
+   ========================================= */
+
+@media (min-width: 761px) and (max-height: 800px) {
+
+    .register-main {
+        padding: 55px 35px 12px;
+    }
+
+    .register-heading {
+        margin-bottom: 11px;
+    }
+
+    .register-heading-icon {
+        width: 33px;
+        height: 33px;
+        margin-bottom: 7px;
+        font-size: 16px;
+    }
+
+    .register-fields {
+        gap: 8px 11px;
+    }
+
+    .register-input {
+        min-height: 36px;
+    }
+
+    .register-input input,
+    .register-input select {
+        height: 34px;
+    }
+
+    .register-submit {
+        min-height: 39px;
+        margin-top: 11px;
+    }
+
+    .register-bottom-text {
+        margin: 7px 0;
+    }
+
+    .register-divider {
+        margin-top: 8px;
+    }
+
+    .register-back {
+        margin-top: 8px;
+    }
+
+    .register-disclaimer {
+        margin-top: 7px;
+    }
+}
+
+/* =========================================
+   TABLET
+   ========================================= */
+
+@media (max-width: 1050px) and (min-width: 761px) {
+
     .register-layout {
         grid-template-columns: minmax(0, 0.8fr) minmax(480px, 1.2fr);
     }
 
     .register-visual-content {
-        padding: 35px 30px;
+        padding: 30px 25px;
     }
 
     .register-main {
-        padding-right: 35px;
-        padding-left: 35px;
+        padding-right: 28px;
+        padding-left: 28px;
     }
 
     .visual-info-item {
@@ -565,64 +671,76 @@ body.register-screen {
     }
 }
 
+/* =========================================
+   MOBILE
+   ========================================= */
+
 @media (max-width: 760px) {
+
+    body.register-screen {
+        min-height: 100vh;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
     .register-layout {
         grid-template-columns: 1fr;
+        min-height: 100vh;
     }
 
     .register-visual {
-        min-height: 340px;
+        min-height: 310px;
     }
 
     .register-visual-content {
-        min-height: 340px;
-        padding: 25px 25px 20px;
+        min-height: 310px;
+        padding: 23px 24px 18px;
     }
 
     .register-intro {
-        margin-top: 55px;
-        margin-bottom: 25px;
+        margin-top: 40px;
+        margin-bottom: 20px;
     }
 
     .register-intro h1 {
-        font-size: 34px;
+        font-size: 32px;
     }
 
     .register-intro p {
-        font-size: 12px;
+        font-size: 11px;
     }
 
     .register-visual-info {
         gap: 8px;
-        margin-bottom: 20px;
+        margin-bottom: 17px;
     }
 
     .visual-info-item {
         min-width: 0;
         flex: 1;
-        padding: 10px;
+        padding: 9px;
     }
 
     .visual-info-item strong {
-        font-size: 10px;
-    }
-
-    .visual-info-item small {
         font-size: 9px;
     }
 
+    .visual-info-item small {
+        font-size: 8px;
+    }
+
     .register-visual-footer {
-        padding-top: 14px;
+        padding-top: 12px;
         font-size: 8px;
     }
 
     .register-main {
         min-height: auto;
-        padding: 75px 22px 35px;
+        padding: 70px 22px 28px;
     }
 
     .register-top-link {
-        top: 25px;
+        top: 23px;
         right: 22px;
     }
 
@@ -631,11 +749,16 @@ body.register-screen {
     }
 
     .register-disclaimer {
-        margin-top: 25px;
+        margin-top: 20px;
     }
 }
 
+/* =========================================
+   SMALL MOBILE
+   ========================================= */
+
 @media (max-width: 430px) {
+
     .register-fields {
         grid-template-columns: 1fr;
     }
@@ -645,15 +768,15 @@ body.register-screen {
     }
 
     .register-visual {
-        min-height: 310px;
+        min-height: 290px;
     }
 
     .register-visual-content {
-        min-height: 310px;
+        min-height: 290px;
     }
 
     .register-intro h1 {
-        font-size: 29px;
+        font-size: 28px;
     }
 
     .register-main {
@@ -664,4 +787,33 @@ body.register-screen {
     .register-top-link {
         font-size: 10px;
     }
+
+    /* FORCE NO SCROLL ON DESKTOP */
+@media screen and (min-width: 761px) {
+    html,
+    body.register-screen {
+        width: 100% !important;
+        height: 100vh !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .register-layout {
+        height: 100vh !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .register-visual,
+    .register-visual-content,
+    .register-main {
+        height: 100% !important;
+        min-height: 0 !important;
+    }
+
+    .register-main {
+        overflow-y: auto !important;
+    }
+}
+
 }
