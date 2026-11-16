@@ -8,6 +8,7 @@ require_role('admin');
 
 $pdo = db();
 $currentUserId = (int) $_SESSION['user_id'];
+$isSuperAdmin  = is_super_admin();
 
 // HELPER FUNCTION
 if (!function_exists('pcare_user_initials')) {
@@ -53,8 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: users.php?notice=invalidemail'); exit;
         }
 
-        if (!in_array($role, ['student', 'personnel'], true)) {
-            header('Location: users.php?notice=invalidrole'); exit;
+        // ROLE VALIDATION — Super Admin can create Admin; regular Admin cannot.
+        $allowedNewRoles = $isSuperAdmin
+            ? ['student', 'personnel', 'admin']
+            : ['student', 'personnel'];
+
+        if (!in_array($role, $allowedNewRoles, true)) {
+            header('Location: users.php?notice=restricted'); exit;
         }
 
         if (strlen($password) < 8) {
@@ -109,7 +115,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$targetUser) { header('Location: users.php?notice=notfound'); exit; }
 
+        // ROLE RESTRICTIONS
+        if ($targetUser['role'] === 'super_admin') {
+            // No one can edit Super Admin accounts through this module.
+            header('Location: users.php?notice=restricted_superadmin'); exit;
+        }
+
+        if ($targetUser['role'] === 'admin' && !$isSuperAdmin && $targetUserId !== $currentUserId) {
+            // Regular Admin cannot edit other Admin accounts (self-edit is allowed).
+            header('Location: users.php?notice=restricted_admin'); exit;
+        }
+
         if ($targetUser['role'] === 'admin') {
+            // Admin role stays locked (cannot be promoted or demoted).
             $newRole = 'admin';
         } else {
             if (!in_array($requestedRole, ['student', 'personnel'], true)) {
@@ -172,8 +190,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$targetUser) { header('Location: users.php?notice=notfound'); exit; }
 
+        // ROLE RESTRICTIONS
+        if ($targetUser['role'] === 'super_admin') {
+            // Super Admin accounts cannot be activated or deactivated through this module.
+            header('Location: users.php?notice=restricted_superadmin'); exit;
+        }
+
+        if ($targetUser['role'] === 'admin' && !$isSuperAdmin) {
+            // Only Super Admin can change the status of Admin accounts.
+            header('Location: users.php?notice=restricted_admin'); exit;
+        }
+
         if ($targetUser['role'] === 'admin' && (int) $targetUser['is_active'] === 1 && $newStatus === 0) {
-            $adminCount = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'admin' AND is_active = 1")->fetchColumn();
+            // Last-admin protection now counts both Admin and Super Admin.
+            $adminCount = $pdo->query("SELECT COUNT(*) FROM users WHERE role IN ('admin', 'super_admin') AND is_active = 1")->fetchColumn();
             if ((int) $adminCount <= 1) { header('Location: users.php?notice=lastadmin'); exit; }
         }
 
@@ -195,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $search = trim($_GET['search'] ?? '');
 $role = trim($_GET['role'] ?? '');
 $status = trim($_GET['status'] ?? '');
-$allowedRoles = ['student', 'personnel', 'admin'];
+$allowedRoles = ['student', 'personnel', 'admin', 'super_admin'];
 
 $sql = "SELECT user_id, full_name, email, role, id_number, department, contact_no, is_active, created_at FROM users WHERE 1 = 1";
 $params = [];
@@ -240,6 +270,9 @@ $notices = [
     'notfound' => ['type' => 'danger', 'message' => 'The selected user account could not be found.'],
     'invalid' => ['type' => 'danger', 'message' => 'Invalid account action. Please try again.'],
     'invalidrole' => ['type' => 'danger', 'message' => 'Invalid account role selected.'],
+    'restricted' => ['type' => 'danger', 'message' => 'You do not have permission to assign that account role.'],
+    'restricted_admin' => ['type' => 'danger', 'message' => 'Only a Super Administrator can manage Administrator accounts.'],
+    'restricted_superadmin' => ['type' => 'danger', 'message' => 'Super Administrator accounts cannot be modified through this module.'],
     'required' => ['type' => 'danger', 'message' => 'Please complete all required fields.'],
     'editrequired' => ['type' => 'danger', 'message' => 'Please check the user information. Some fields are invalid or too long.'],
     'invalidemail' => ['type' => 'danger', 'message' => 'Please enter a valid email address.'],
@@ -257,5 +290,6 @@ $notification = $notices[$notice] ?? null;
 $roleLabels = [
     'student' => 'Student',
     'personnel' => 'IT Personnel',
-    'admin' => 'Administrator'
+    'admin' => 'Administrator',
+    'super_admin' => 'Super Administrator'
 ];

@@ -1,27 +1,37 @@
 <?php
 // admin/categories.php
 require_once __DIR__ . '/categories-logic.php';
+
+// Safe fallback para sa avatar function (kung wala sa logic file)
+if (!function_exists('pcare_categories_initials')) {
+    function pcare_categories_initials(string $name): string {
+        $parts = preg_split('/\s+/', trim($name));
+        $initials = '';
+        foreach (array_slice($parts, 0, 2) as $part) {
+            if ($part !== '') $initials .= strtoupper(substr($part, 0, 1));
+        }
+        return $initials ?: 'U';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Issue Categories | PCare</title>
+    <title>Issue Categories | LabSync</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- LOCAL BOOTSTRAP & ICONS -->
+    <link href="../assets/vendor/bootstrap.min.css?v=123" rel="stylesheet">
+    <link href="../assets/vendor/bootstrap-icons.min.css?v=123" rel="stylesheet">
 
-    <!-- External CSS -->
-    <link rel="stylesheet" href="../assets/css/admin-categories.css">
+    <!-- PREMIUM CSS -->
+    <link rel="stylesheet" href="../assets/css/admin-categories.css?v=123">
 </head>
 <body>
 
@@ -32,7 +42,7 @@ require_once __DIR__ . '/categories-logic.php';
         <a href="dashboard.php" class="brand">
             <span class="brand-icon"><i class="bi bi-pc-display-horizontal"></i></span>
             <span>
-                <span class="brand-name">PCare</span>
+                <span class="brand-name">LabSync</span>
                 <span class="brand-subtitle">LABORATORY MANAGEMENT</span>
             </span>
         </a>
@@ -56,7 +66,7 @@ require_once __DIR__ . '/categories-logic.php';
                 </div>
                 <div>
                     <div class="admin-name"><?= e($_SESSION['full_name'] ?? 'Administrator') ?></div>
-                    <div class="admin-role">System Administrator</div>
+                    <div class="admin-role"><?= is_super_admin() ? 'Super Administrator' : 'System Administrator' ?></div>
                 </div>
             </div>
             <a href="../logout.php" class="sidebar-link logout-link"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
@@ -71,34 +81,32 @@ require_once __DIR__ . '/categories-logic.php';
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="breadcrumb-text">
-                    Administrator <span class="mx-2">/</span> <strong>Issue Categories</strong>
+                    <?= is_super_admin() ? 'Super Administrator' : 'Administrator' ?> <span class="mx-2">/</span> <strong>Issue Categories</strong>
                 </div>
             </div>
             <div class="topbar-right">
-                <span><span class="topbar-dot"></span> Administrator Portal</span>
+                <span><span class="topbar-dot"></span> <?= is_super_admin() ? 'Super Administrator Portal' : 'Administrator Portal' ?></span>
                 <span class="topbar-date"><i class="bi bi-calendar3 me-1"></i> <?= date('F d, Y') ?></span>
             </div>
         </header>
 
         <main class="main-content">
-            <!-- PAGE HEADING -->
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <!-- HERO BANNER -->
+            <section class="welcome-section">
                 <div>
-                    <p class="page-eyebrow">SYSTEM CONFIGURATION</p>
-                    <h1 class="page-title">Issue Categories</h1>
-                    <p class="page-description">
-                        Manage the categories that users can select when reporting computer issues.
+                    <div class="welcome-label">SYSTEM CONFIGURATION</div>
+                    <h1 class="welcome-title">Issue Categories</h1>
+                    <p class="welcome-description">
+                        Manage the categories that users can select when reporting computer issues. Keep the list organized to help IT personnel resolve problems faster.
                     </p>
                 </div>
-                <div class="page-heading-actions">
-                    <button type="button" class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-                        <i class="bi bi-plus-lg"></i> Add Category
-                    </button>
-                </div>
-            </div>
+                <button type="button" class="report-button" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                    <i class="bi bi-plus-lg"></i> Add Category
+                </button>
+            </section>
 
             <!-- NOTIFICATIONS -->
-            <?php if ($notification): ?>
+            <?php if (isset($notification) && $notification): ?>
                 <div class="alert alert-<?= e($notification['type']) ?> alert-dismissible fade show mb-4" role="alert">
                     <i class="bi bi-info-circle me-2"></i>
                     <?= e($notification['message']) ?>
@@ -111,28 +119,28 @@ require_once __DIR__ . '/categories-logic.php';
                 <div class="col-12 col-md-4">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Total Categories</span>
-                            <span class="stat-icon"><i class="bi bi-tags"></i></span>
+                            <div class="stat-icon"><i class="bi bi-tags"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= (int) $stats['total'] ?></h3>
+                        <div class="stat-value"><?= (int) $stats['total'] ?></div>
+                        <div class="stat-label">Total Categories</div>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Active Categories</span>
-                            <span class="stat-icon"><i class="bi bi-check-circle"></i></span>
+                            <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= (int) $stats['active'] ?></h3>
+                        <div class="stat-value"><?= (int) $stats['active'] ?></div>
+                        <div class="stat-label">Active Categories</div>
                     </div>
                 </div>
                 <div class="col-12 col-md-4">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Inactive Categories</span>
-                            <span class="stat-icon"><i class="bi bi-pause-circle"></i></span>
+                            <div class="stat-icon"><i class="bi bi-pause-circle"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= (int) $stats['inactive'] ?></h3>
+                        <div class="stat-value"><?= (int) $stats['inactive'] ?></div>
+                        <div class="stat-label">Inactive Categories</div>
                     </div>
                 </div>
             </div>
@@ -158,7 +166,7 @@ require_once __DIR__ . '/categories-logic.php';
                             </select>
                         </div>
                         <div class="col-6 col-lg-3 d-flex align-items-end gap-2">
-                            <button type="submit" class="btn-primary-custom flex-grow-1"><i class="bi bi-search"></i> Apply</button>
+                            <button type="submit" class="btn-primary-custom flex-grow-1" style="justify-content: center;"><i class="bi bi-search"></i> Apply</button>
                             <a href="categories.php" class="btn-light-custom">Reset</a>
                         </div>
                     </form>
@@ -170,7 +178,7 @@ require_once __DIR__ . '/categories-logic.php';
                 <div class="card-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div>
                         <h5 class="card-title">Registered Categories</h5>
-                        <span class="card-subtitle">View and manage the issue categories stored in PCare.</span>
+                        <span class="card-subtitle">View and manage the issue categories stored in LabSync.</span>
                     </div>
                     <span class="result-count"><?= count($categories) ?> RESULT(S)</span>
                 </div>
@@ -197,9 +205,13 @@ require_once __DIR__ . '/categories-logic.php';
                                 <?php foreach ($categories as $category): ?>
                                     <tr>
                                         <td>
-                                            <div class="d-flex align-items-center gap-3">
-                                                <div class="category-icon"><i class="bi bi-tag"></i></div>
-                                                <div class="category-name"><?= e($category['category_name']) ?></div>
+                                            <div class="user-cell">
+                                                <div class="user-avatar-table" style="background: var(--soft-mint); color: var(--deep-green);">
+                                                    <i class="bi bi-tag"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="user-name"><?= e($category['category_name']) ?></div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td>
@@ -247,7 +259,7 @@ require_once __DIR__ . '/categories-logic.php';
             </section>
 
             <footer class="page-footer">
-                PCare · Administrator Portal · SLSU Lucena Campus
+                LabSync · <?= is_super_admin() ? 'Super Administrator Portal' : 'Administrator Portal' ?> · SLSU Lucena Campus
             </footer>
         </main>
     </div>
@@ -321,8 +333,8 @@ require_once __DIR__ . '/categories-logic.php';
         </div>
     </div>
 
-    <!-- BOOTSTRAP JAVASCRIPT -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- LOCAL BOOTSTRAP JS -->
+    <script src="../assets/vendor/bootstrap.bundle.min.js?v=123"></script>
 
     <!-- External JS -->
     <script src="../assets/js/admin-categories.js"></script>

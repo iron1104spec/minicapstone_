@@ -1,22 +1,40 @@
 <?php
 // admin/users.php
 require_once __DIR__ . '/users-logic.php';
+
+// Role-aware UI labels
+$uiRoleLabel       = $isSuperAdmin ? 'Super Administrator' : 'Administrator';
+$uiRolePortalLabel = $isSuperAdmin ? 'Super Administrator Portal' : 'Administrator Portal';
+
+// UI permission helpers (mirror the backend rules)
+$canEditUser = function (array $u) use ($isSuperAdmin, $currentUserId): bool {
+    if ($u['role'] === 'super_admin') return false;
+    if ($u['role'] === 'admin' && !$isSuperAdmin && (int) $u['user_id'] !== $currentUserId) return false;
+    return true;
+};
+$canChangeStatusUser = function (array $u) use ($isSuperAdmin): bool {
+    if ($u['role'] === 'super_admin') return false;
+    if ($u['role'] === 'admin' && !$isSuperAdmin) return false;
+    return true;
+};
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management | PCare</title>
+    <title>User Management | LabSync</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- LOCAL BOOTSTRAP & ICONS -->
+    <link href="../assets/vendor/bootstrap.min.css?v=123" rel="stylesheet">
+    <link href="../assets/vendor/bootstrap-icons.min.css?v=123" rel="stylesheet">
 
-    <!-- External CSS -->
-    <link rel="stylesheet" href="../assets/css/admin-users.css">
+    <!-- PREMIUM CSS -->
+    <link rel="stylesheet" href="../assets/css/admin-users.css?v=123">
 </head>
 <body>
 
@@ -27,7 +45,7 @@ require_once __DIR__ . '/users-logic.php';
         <a href="dashboard.php" class="brand">
             <span class="brand-icon"><i class="bi bi-pc-display-horizontal"></i></span>
             <span>
-                <span class="brand-name">PCare</span>
+                <span class="brand-name">LabSync</span>
                 <span class="brand-subtitle">LABORATORY MANAGEMENT</span>
             </span>
         </a>
@@ -51,7 +69,7 @@ require_once __DIR__ . '/users-logic.php';
                 </div>
                 <div>
                     <div class="admin-name"><?= e($_SESSION['full_name'] ?? 'Administrator') ?></div>
-                    <div class="admin-role">System Administrator</div>
+                    <div class="admin-role"><?= e($uiRoleLabel) ?></div>
                 </div>
             </div>
             <a href="../logout.php" class="sidebar-link logout-link"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
@@ -66,29 +84,29 @@ require_once __DIR__ . '/users-logic.php';
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="breadcrumb-text">
-                    Administrator <span class="mx-2">/</span> <strong>User Management</strong>
+                    <?= e($uiRoleLabel) ?> <span class="mx-2">/</span> <strong>User Management</strong>
                 </div>
             </div>
             <div class="topbar-right">
-                <span><span class="topbar-dot"></span> Administrator Portal</span>
+                <span><span class="topbar-dot"></span> <?= e($uiRolePortalLabel) ?></span>
                 <span class="topbar-date"><i class="bi bi-calendar3 me-1"></i> <?= date('F d, Y') ?></span>
             </div>
         </header>
 
         <main class="main-content">
-            <!-- PAGE HEADING -->
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <!-- HERO BANNER -->
+            <section class="welcome-section">
                 <div>
-                    <p class="page-eyebrow">ACCOUNT ADMINISTRATION</p>
-                    <h1 class="page-title">User Management</h1>
-                    <p class="page-description">Manage registered accounts, user roles, and system access.</p>
+                    <div class="welcome-label">ACCOUNT ADMINISTRATION</div>
+                    <h1 class="welcome-title">User Management</h1>
+                    <p class="welcome-description">
+                        Manage registered accounts, user roles, and system access. Ensure that every student, personnel, and administrator has the correct permissions.
+                    </p>
                 </div>
-                <div class="page-heading-actions">
-                    <button type="button" class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                        <i class="bi bi-person-plus"></i> Add New User
-                    </button>
-                </div>
-            </div>
+                <button type="button" class="report-button" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                    <i class="bi bi-person-plus"></i> Add New User
+                </button>
+            </section>
 
             <!-- NOTIFICATIONS -->
             <?php if ($notification): ?>
@@ -116,10 +134,10 @@ require_once __DIR__ . '/users-logic.php';
                     <div class="col-6 col-md-4 col-xl-2">
                         <div class="stat-card">
                             <div class="stat-top">
-                                <span class="stat-label"><?= e($card[0]) ?></span>
-                                <span class="stat-icon"><i class="bi <?= e($card[2]) ?>"></i></span>
+                                <div class="stat-icon"><i class="bi <?= e($card[2]) ?>"></i></div>
                             </div>
-                            <h3 class="stat-value"><?= (int) $card[1] ?></h3>
+                            <div class="stat-value"><?= (int) $card[1] ?></div>
+                            <div class="stat-label"><?= e($card[0]) ?></div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -144,6 +162,9 @@ require_once __DIR__ . '/users-logic.php';
                                 <option value="student" <?= $role === 'student' ? 'selected' : '' ?>>Student</option>
                                 <option value="personnel" <?= $role === 'personnel' ? 'selected' : '' ?>>IT Personnel</option>
                                 <option value="admin" <?= $role === 'admin' ? 'selected' : '' ?>>Administrator</option>
+                                <?php if ($isSuperAdmin): ?>
+                                    <option value="super_admin" <?= $role === 'super_admin' ? 'selected' : '' ?>>Super Administrator</option>
+                                <?php endif; ?>
                             </select>
                         </div>
                         <div class="col-6 col-lg-2">
@@ -155,7 +176,7 @@ require_once __DIR__ . '/users-logic.php';
                             </select>
                         </div>
                         <div class="col-12 col-lg-3 d-flex align-items-end gap-2">
-                            <button type="submit" class="btn-primary-custom flex-grow-1"><i class="bi bi-search"></i> Apply Filters</button>
+                            <button type="submit" class="btn-primary-custom flex-grow-1" style="justify-content: center;"><i class="bi bi-search"></i> Apply Filters</button>
                             <a href="users.php" class="btn-light-custom">Reset</a>
                         </div>
                     </form>
@@ -224,15 +245,17 @@ require_once __DIR__ . '/users-logic.php';
                                         <td>
                                             <div class="d-flex flex-wrap gap-2">
                                                 <!-- EDIT BUTTON -->
-                                                <button type="button" class="action-button btn-edit" data-bs-toggle="modal" data-bs-target="#editUserModal<?= (int) $user['user_id'] ?>">
-                                                    <i class="bi bi-pencil-square"></i> Edit
-                                                </button>
+                                                <?php if ($canEditUser($user)): ?>
+                                                    <button type="button" class="action-button btn-edit" data-bs-toggle="modal" data-bs-target="#editUserModal<?= (int) $user['user_id'] ?>">
+                                                        <i class="bi bi-pencil-square"></i> Edit
+                                                    </button>
+                                                <?php endif; ?>
 
                                                 <!-- ACTIVE ACCOUNT -->
                                                 <?php if ((int) $user['is_active'] === 1): ?>
                                                     <?php if ((int) $user['user_id'] === $currentUserId): ?>
                                                         <span class="current-account"><i class="bi bi-shield-check me-1"></i> Current account</span>
-                                                    <?php else: ?>
+                                                    <?php elseif ($canChangeStatusUser($user)): ?>
                                                         <form method="POST" onsubmit="return confirm('Are you sure you want to deactivate this account? The user will no longer be able to log in.');">
                                                             <?= csrf_field() ?>
                                                             <input type="hidden" name="action" value="change_status">
@@ -240,16 +263,26 @@ require_once __DIR__ . '/users-logic.php';
                                                             <input type="hidden" name="new_status" value="0">
                                                             <button type="submit" class="action-button btn-deactivate"><i class="bi bi-person-x"></i> Deactivate</button>
                                                         </form>
+                                                    <?php else: ?>
+                                                        <span class="current-account" title="Super Administrator accounts cannot be managed through this module.">
+                                                            <i class="bi bi-shield-lock me-1"></i> Restricted
+                                                        </span>
                                                     <?php endif; ?>
                                                 <?php else: ?>
                                                     <!-- INACTIVE ACCOUNT -->
-                                                    <form method="POST" onsubmit="return confirm('Are you sure you want to activate this account?');">
-                                                        <?= csrf_field() ?>
-                                                        <input type="hidden" name="action" value="change_status">
-                                                        <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
-                                                        <input type="hidden" name="new_status" value="1">
-                                                        <button type="submit" class="action-button btn-activate"><i class="bi bi-person-check"></i> Activate</button>
-                                                    </form>
+                                                    <?php if ($canChangeStatusUser($user)): ?>
+                                                        <form method="POST" onsubmit="return confirm('Are you sure you want to activate this account?');">
+                                                            <?= csrf_field() ?>
+                                                            <input type="hidden" name="action" value="change_status">
+                                                            <input type="hidden" name="user_id" value="<?= (int) $user['user_id'] ?>">
+                                                            <input type="hidden" name="new_status" value="1">
+                                                            <button type="submit" class="action-button btn-activate"><i class="bi bi-person-check"></i> Activate</button>
+                                                        </form>
+                                                    <?php else: ?>
+                                                        <span class="current-account" title="Super Administrator accounts cannot be managed through this module.">
+                                                            <i class="bi bi-shield-lock me-1"></i> Restricted
+                                                        </span>
+                                                    <?php endif; ?>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
@@ -265,13 +298,14 @@ require_once __DIR__ . '/users-logic.php';
             </section>
 
             <footer class="page-footer">
-                PCare · Administrator Portal · SLSU Lucena Campus
+                LabSync · <?= e($uiRolePortalLabel) ?> · SLSU Lucena Campus
             </footer>
         </main>
     </div>
 
     <!-- EDIT USER MODALS -->
     <?php foreach ($users as $user): ?>
+        <?php if ($canEditUser($user)): ?>
         <div class="modal fade" id="editUserModal<?= (int) $user['user_id'] ?>" tabindex="-1" aria-labelledby="editUserModalLabel<?= (int) $user['user_id'] ?>" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
@@ -335,6 +369,7 @@ require_once __DIR__ . '/users-logic.php';
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     <?php endforeach; ?>
 
     <!-- ADD USER MODAL -->
@@ -344,7 +379,11 @@ require_once __DIR__ . '/users-logic.php';
                 <div class="modal-header px-4 py-3">
                     <div>
                         <h5 class="modal-title" id="addUserModalLabel"><i class="bi bi-person-plus me-2"></i> Create User Account</h5>
-                        <div class="modal-description">Add a Student or IT Personnel account to PCare.</div>
+                        <div class="modal-description">
+                            <?= $isSuperAdmin
+                                ? 'Add a Student, IT Personnel, or Administrator account.'
+                                : 'Add a Student or IT Personnel account.' ?>
+                        </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -379,8 +418,15 @@ require_once __DIR__ . '/users-logic.php';
                                     <option value="">Select account role</option>
                                     <option value="student">Student</option>
                                     <option value="personnel">IT Personnel</option>
+                                    <?php if ($isSuperAdmin): ?>
+                                        <option value="admin">Administrator</option>
+                                    <?php endif; ?>
                                 </select>
-                                <small class="text-secondary d-block mt-2">Administrator accounts cannot be created through this form.</small>
+                                <small class="text-secondary d-block mt-2">
+                                    <?= $isSuperAdmin
+                                        ? 'As a Super Administrator, you may also create Administrator accounts.'
+                                        : 'Administrator accounts cannot be created through this form.' ?>
+                                </small>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Password</label>
@@ -405,8 +451,8 @@ require_once __DIR__ . '/users-logic.php';
         </div>
     </div>
 
-    <!-- BOOTSTRAP JAVASCRIPT -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- LOCAL BOOTSTRAP JS -->
+    <script src="../assets/vendor/bootstrap.bundle.min.js?v=123"></script>
 
     <!-- External JS -->
     <script src="../assets/js/admin-users.js"></script>

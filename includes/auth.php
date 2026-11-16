@@ -1,4 +1,3 @@
-
 <?php
 
 require_once __DIR__ . '/functions.php';
@@ -46,6 +45,10 @@ function require_login(): void
 
 /**
  * Allow access only to specified user roles.
+ *
+ * Super Admin automatically inherits every Admin privilege,
+ * so pages protected with require_role('admin') are also
+ * accessible to Super Admin accounts.
  */
 function require_role($allowed_roles): void
 {
@@ -56,10 +59,27 @@ function require_role($allowed_roles): void
         $allowed_roles = [$allowed_roles];
     }
 
+    // Super Admin inherits all Admin privileges.
+    if (in_array('admin', $allowed_roles, true)) {
+        $allowed_roles[] = 'super_admin';
+    }
+
     // Check whether the logged-in user has permission.
     if (!in_array($_SESSION['role'], $allowed_roles, true)) {
         http_response_code(403);
 
         exit('Access Denied. You do not have permission to view this page.');
     }
+}
+
+
+/**
+ * Check whether the current user is a Super Admin.
+ *
+ * Use this helper in pages that need to display
+ * Super-Admin-only controls (e.g., managing Admin accounts).
+ */
+function is_super_admin(): bool
+{
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin';
 }

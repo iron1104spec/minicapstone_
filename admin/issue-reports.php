@@ -1,22 +1,36 @@
 <?php
 // admin/issue-reports.php
 require_once __DIR__ . '/issue-reports-logic.php';
+
+// Safe fallback para sa avatar function
+if (!function_exists('pcare_report_initials')) {
+    function pcare_report_initials(string $name): string {
+        $parts = preg_split('/\s+/', trim($name));
+        $initials = '';
+        foreach (array_slice($parts, 0, 2) as $part) {
+            if ($part !== '') $initials .= strtoupper(substr($part, 0, 1));
+        }
+        return $initials ?: 'U';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Issue Reports | PCare</title>
+    <title>Issue Reports | LabSync</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    
+    <!-- LOCAL BOOTSTRAP & ICONS -->
+    <link href="../assets/vendor/bootstrap.min.css?v=123" rel="stylesheet">
+    <link href="../assets/vendor/bootstrap-icons.min.css?v=123" rel="stylesheet">
 
-    <!-- External CSS -->
-    <link rel="stylesheet" href="../assets/css/admin-issue-reports.css">
+    <!-- PREMIUM CSS -->
+    <link rel="stylesheet" href="../assets/css/admin-issue-reports.css?v=123">
 </head>
 <body>
 
@@ -27,7 +41,7 @@ require_once __DIR__ . '/issue-reports-logic.php';
         <a href="dashboard.php" class="brand">
             <span class="brand-icon"><i class="bi bi-pc-display-horizontal"></i></span>
             <span>
-                <span class="brand-name">PCare</span>
+                <span class="brand-name">LabSync</span>
                 <span class="brand-subtitle">LABORATORY MANAGEMENT</span>
             </span>
         </a>
@@ -51,7 +65,7 @@ require_once __DIR__ . '/issue-reports-logic.php';
                 </div>
                 <div>
                     <div class="admin-name"><?= e($_SESSION['full_name'] ?? 'Administrator') ?></div>
-                    <div class="admin-role">System Administrator</div>
+                    <div class="admin-role"><?= is_super_admin() ? 'Super Administrator' : 'System Administrator' ?></div>
                 </div>
             </div>
             <a href="../logout.php" class="sidebar-link logout-link"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
@@ -66,24 +80,26 @@ require_once __DIR__ . '/issue-reports-logic.php';
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="breadcrumb-text">
-                    Administrator <span class="mx-2">/</span> <strong>Issue Reports</strong>
+                    <?= is_super_admin() ? 'Super Administrator' : 'Administrator' ?> <span class="mx-2">/</span> <strong>Issue Reports</strong>
                 </div>
             </div>
             <div class="topbar-right">
-                <span><span class="topbar-dot"></span> Administrator Portal</span>
+                <span><span class="topbar-dot"></span> <?= is_super_admin() ? 'Super Administrator Portal' : 'Administrator Portal' ?></span>
                 <span class="topbar-date"><i class="bi bi-calendar3 me-1"></i> <?= date('F d, Y') ?></span>
             </div>
         </header>
 
         <main class="main-content">
-            <!-- PAGE HEADING -->
-            <div class="mb-4">
-                <p class="page-eyebrow">ISSUE MONITORING</p>
-                <h1 class="page-title">Issue Reports</h1>
-                <p class="page-description">
-                    Monitor submitted computer issues and review their maintenance progress.
-                </p>
-            </div>
+            <!-- HERO BANNER -->
+            <section class="welcome-section">
+                <div>
+                    <div class="welcome-label">ISSUE MONITORING</div>
+                    <h1 class="welcome-title">Issue Reports</h1>
+                    <p class="welcome-description">
+                        Monitor submitted computer issues and review their maintenance progress. Ensure every problem is tracked and resolved efficiently.
+                    </p>
+                </div>
+            </section>
 
             <!-- STATISTICS -->
             <?php
@@ -102,10 +118,10 @@ require_once __DIR__ . '/issue-reports-logic.php';
                     <div class="col-6 col-md-4 col-xl-2">
                         <div class="stat-card">
                             <div class="stat-top">
-                                <span class="stat-label"><?= e($card[0]) ?></span>
-                                <span class="stat-icon"><i class="bi <?= e($card[2]) ?>"></i></span>
+                                <div class="stat-icon"><i class="bi <?= e($card[2]) ?>"></i></div>
                             </div>
-                            <h3 class="stat-value"><?= (int) $card[1] ?></h3>
+                            <div class="stat-value"><?= (int) $card[1] ?></div>
+                            <div class="stat-label"><?= e($card[0]) ?></div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -157,7 +173,7 @@ require_once __DIR__ . '/issue-reports-logic.php';
                             </select>
                         </div>
                         <div class="col-6 col-lg-2 d-flex align-items-end gap-2">
-                            <button type="submit" class="btn-primary-custom flex-grow-1"><i class="bi bi-search"></i> Apply</button>
+                            <button type="submit" class="btn-primary-custom flex-grow-1" style="justify-content: center;"><i class="bi bi-search"></i> Apply</button>
                             <a href="issue-reports.php" class="btn-light-custom">Reset</a>
                         </div>
                     </form>
@@ -207,7 +223,6 @@ require_once __DIR__ . '/issue-reports-logic.php';
                                         <td><span class="category-text"><?= e($report['category_name'] ?? 'Unknown Category') ?></span></td>
                                         <td>
                                             <span class="status-badge <?= e(pcare_report_status_class($report['status'])) ?>">
-                                                <span class="status-dot"></span>
                                                 <?= e($report['status']) ?>
                                             </span>
                                         </td>
@@ -229,7 +244,7 @@ require_once __DIR__ . '/issue-reports-logic.php';
             </section>
 
             <footer class="page-footer">
-                PCare · Administrator Portal · SLSU Lucena Campus
+                LabSync · <?= is_super_admin() ? 'Super Administrator Portal' : 'Administrator Portal' ?> · SLSU Lucena Campus
             </footer>
         </main>
     </div>
@@ -247,12 +262,12 @@ require_once __DIR__ . '/issue-reports-logic.php';
             $photoUrl = '../' . ltrim($normalizedPhotoPath, '/');
         }
         ?>
-        <div class="modal fade" id="reportModal<?= $reportId ?>" tabindex="-1" aria-labelledby="reportModalLabel<?= $reportId ?>" aria-hidden="true">
+        <div class="modal fade" id="reportModal<?= $reportId ?>" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header px-4 py-3">
                         <div>
-                            <h5 class="modal-title" id="reportModalLabel<?= $reportId ?>">Issue Report Details</h5>
+                            <h5 class="modal-title">Issue Report Details</h5>
                             <div class="modal-description">
                                 Reference Number: <strong><?= e($report['reference_no'] ?: ('REPORT-' . $reportId)) ?></strong>
                             </div>
@@ -261,7 +276,6 @@ require_once __DIR__ . '/issue-reports-logic.php';
                     </div>
                     
                     <div class="modal-body p-4">
-                        <!-- REPORT INFORMATION -->
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
                                 <div class="detail-section">
@@ -286,7 +300,6 @@ require_once __DIR__ . '/issue-reports-logic.php';
                                 <div class="detail-section">
                                     <span class="detail-label">Current Status</span>
                                     <span class="status-badge <?= e(pcare_report_status_class($report['status'])) ?>">
-                                        <span class="status-dot"></span>
                                         <?= e($report['status']) ?>
                                     </span>
                                 </div>
@@ -317,13 +330,11 @@ require_once __DIR__ . '/issue-reports-logic.php';
                             </div>
                         </div>
 
-                        <!-- ISSUE DESCRIPTION -->
                         <div class="mb-4">
                             <span class="detail-label">Issue Description</span>
                             <div class="description-box"><?= e($report['description']) ?></div>
                         </div>
 
-                        <!-- ATTACHED PHOTO -->
                         <div class="mb-4">
                             <span class="detail-label">Attached Photo</span>
                             <?php if ($photoUrl !== ''): ?>
@@ -336,7 +347,6 @@ require_once __DIR__ . '/issue-reports-logic.php';
                             <?php endif; ?>
                         </div>
 
-                        <!-- STATUS HISTORY -->
                         <div>
                             <span class="detail-label mb-3">Issue Status History</span>
                             <?php if (empty($historyItems)): ?>
@@ -377,8 +387,8 @@ require_once __DIR__ . '/issue-reports-logic.php';
         </div>
     <?php endforeach; ?>
 
-    <!-- BOOTSTRAP JAVASCRIPT -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- LOCAL BOOTSTRAP JS -->
+    <script src="../assets/vendor/bootstrap.bundle.min.js?v=123"></script>
 
     <!-- External JS -->
     <script src="../assets/js/admin-issue-reports.js"></script>

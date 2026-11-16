@@ -1,130 +1,183 @@
-/* assets/css/personnel-maintenance-records.css */
+<?php
+// admin/maintenance-records.php
+require_once __DIR__ . '/maintenance-records-logic.php';
 
-body {
-    font-family: 'Inter', sans-serif;
-    background: #F7F8F6;
-    color: #303C39;
+// Safe fallback para sa avatar function
+if (!function_exists('pcare_user_initials')) {
+    function pcare_user_initials(string $name): string {
+        $parts = preg_split('/\s+/', trim($name));
+        $initials = '';
+        foreach (array_slice($parts, 0, 2) as $part) {
+            if ($part !== '') $initials .= strtoupper(substr($part, 0, 1));
+        }
+        return $initials ?: 'U';
+    }
 }
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Records | PCare</title>
 
-.navbar {
-    background: #245B54;
-}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- LOCAL BOOTSTRAP & ICONS -->
+    <link href="../assets/vendor/bootstrap.min.css?v=123" rel="stylesheet">
+    <link href="../assets/vendor/bootstrap-icons.min.css?v=123" rel="stylesheet">
+    
+    <!-- PREMIUM CSS -->
+    <link rel="stylesheet" href="../assets/css/admin-maintenance-records.css?v=123">
+</head>
+<body>
 
-.navbar-brand {
-    font-weight: 700;
-    letter-spacing: -0.5px;
-}
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-.navbar .nav-link {
-    color: rgba(255,255,255,.82);
-}
+    <aside class="sidebar" id="sidebar">
+        <a href="dashboard.php" class="brand">
+            <span class="brand-icon"><i class="bi bi-pc-display-horizontal"></i></span>
+            <span>
+                <span class="brand-name">PCare</span>
+                <span class="brand-subtitle">LABORATORY MANAGEMENT</span>
+            </span>
+        </a>
 
-.navbar .nav-link:hover,
-.navbar .nav-link.active {
-    color: #FFFFFF;
-}
+        <p class="sidebar-label">MAIN MENU</p>
 
-.page-heading {
-    font-weight: 700;
-    letter-spacing: -1px;
-}
+        <nav class="sidebar-nav">
+            <a href="dashboard.php" class="sidebar-link"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+            <a href="users.php" class="sidebar-link"><i class="bi bi-people"></i> User Management</a>
+            <a href="computer-units.php" class="sidebar-link"><i class="bi bi-pc-display"></i> Computer Units</a>
+            <a href="categories.php" class="sidebar-link"><i class="bi bi-tags"></i> Issue Categories</a>
+            <a href="issue-reports.php" class="sidebar-link"><i class="bi bi-clipboard2-pulse"></i> Issue Reports</a>
+            <a href="maintenance-records.php" class="sidebar-link active"><i class="bi bi-tools"></i> Maintenance Records</a>
+            <a href="analytics.php" class="sidebar-link"><i class="bi bi-bar-chart"></i> Reports & Analytics</a>
+        </nav>
 
-.content-card {
-    background: #FFFFFF;
-    border: 1px solid #E8ECE9;
-    border-radius: 14px;
-    box-shadow: 0 4px 18px rgba(36, 91, 84, 0.04);
-}
+        <div class="sidebar-bottom">
+            <div class="admin-profile">
+                <div class="admin-avatar">
+                    <?= e(pcare_user_initials($_SESSION['full_name'] ?? 'Administrator')) ?>
+                </div>
+                <div>
+                    <div class="admin-name"><?= e($_SESSION['full_name'] ?? 'Administrator') ?></div>
+                    <div class="admin-role"><?= is_super_admin() ? 'Super Administrator' : 'System Administrator' ?></div>
+                </div>
+            </div>
+            <a href="../logout.php" class="sidebar-link logout-link"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
+        </div>
+    </aside>
 
-.section-title {
-    font-weight: 700;
-    font-size: 17px;
-}
+    <div class="main-wrapper">
+        <header class="topbar">
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" class="mobile-toggle" id="sidebarToggle" aria-label="Toggle navigation">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="breadcrumb-text">
+                    <?= is_super_admin() ? 'Super Administrator' : 'Administrator' ?> <span class="mx-2">/</span> <strong>Maintenance Records</strong>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <span><span class="topbar-dot"></span> <?= is_super_admin() ? 'Super Administrator Portal' : 'Administrator Portal' ?></span>
+                <span class="topbar-date"><i class="bi bi-calendar3 me-1"></i> <?= date('F d, Y') ?></span>
+            </div>
+        </header>
 
-.form-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #46534F;
-}
+        <main class="main-content">
+            <!-- HERO BANNER -->
+            <section class="welcome-section">
+                <div>
+                    <div class="welcome-label">LABORATORY MAINTENANCE</div>
+                    <h1 class="welcome-title">Maintenance Records</h1>
+                    <p class="welcome-description">
+                        Track the history of repairs, inspections, and maintenance tasks performed on computer units. Ensure every issue is documented and resolved efficiently.
+                    </p>
+                </div>
+            </section>
 
-.form-control,
-.form-select {
-    border-color: #DDE5E1;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 14px;
-}
+            <!-- TABLE SECTION -->
+            <section class="content-card">
+                <div class="card-heading d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h5 class="card-title">Maintenance History</h5>
+                        <span class="card-subtitle">Complete log of all maintenance activities.</span>
+                    </div>
+                    <span class="result-count"><?= count($records ?? $maintenance_records ?? []) ?> RESULT(S)</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Computer Unit</th>
+                                <th>Issue/Reference</th>
+                                <th>Performed By</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php 
+                            // Fallback variable check para iwas error
+                            $maintenanceList = $records ?? $maintenance_records ?? []; 
+                            ?>
+                            
+                            <?php if (empty($maintenanceList)): ?>
+                                <tr>
+                                    <td colspan="6" class="empty-state">
+                                        <i class="bi bi-tools"></i>
+                                        <strong class="d-block text-dark">No maintenance records found</strong>
+                                        <span>Completed maintenance tasks will appear here.</span>
+                                    </td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($maintenanceList as $record): ?>
+                                    <tr>
+                                        <td><?= e(date('M d, Y', strtotime($record['created_at'] ?? $record['maintenance_date']))) ?></td>
+                                        <td><span class="unit-code"><?= e($record['unit_code']) ?></span></td>
+                                        <td>
+                                            <span class="report-reference"><?= e($record['reference_no'] ?? 'N/A') ?></span>
+                                        </td>
+                                        <td>
+                                            <div class="reporter-name"><?= e($record['performed_by'] ?? $record['personnel_name'] ?? 'IT Personnel') ?></div>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                                // Fallback class mapping para sa status
+                                                $statusStr = strtolower(str_replace(' ', '', $record['status'] ?? 'completed'));
+                                            ?>
+                                            <span class="status-badge <?= e($statusStr) ?>">
+                                                <?= e($record['status'] ?? 'Completed') ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <!-- I-adjust ang href kung iba ang pangalan ng details page niyo -->
+                                            <a href="maintenance-details.php?id=<?= (int) ($record['maintenance_id'] ?? 0) ?>" class="btn-view">
+                                                <i class="bi bi-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <i class="bi bi-info-circle me-1"></i> Showing <?= count($maintenanceList) ?> maintenance record(s).
+                </div>
+            </section>
 
-.form-control:focus,
-.form-select:focus {
-    border-color: #4E968B;
-    box-shadow: 0 0 0 3px rgba(78, 150, 139, 0.12);
-}
+            <footer class="page-footer">
+                PCare · <?= is_super_admin() ? 'Super Administrator Portal' : 'Administrator Portal' ?> · SLSU Lucena Campus
+            </footer>
+        </main>
+    </div>
 
-.btn-pcare {
-    background: #4E968B;
-    color: #FFFFFF;
-    border: none;
-    border-radius: 8px;
-    padding: 10px 18px;
-    font-weight: 600;
-}
-
-.btn-pcare:hover {
-    background: #245B54;
-    color: #FFFFFF;
-}
-
-.btn-view {
-    background: #E5F0ED;
-    color: #245B54;
-    border: 1px solid #D5E7E1;
-    border-radius: 7px;
-    padding: 6px 11px;
-    font-size: 12px;
-    font-weight: 600;
-    text-decoration: none;
-    white-space: nowrap;
-}
-
-.btn-view:hover {
-    background: #245B54;
-    color: #FFFFFF;
-}
-
-.table thead th {
-    background: #F7F8F6;
-    color: #66736E;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-    padding: 14px;
-    white-space: nowrap;
-}
-
-.table tbody td {
-    padding: 14px;
-    font-size: 13px;
-    vertical-align: middle;
-}
-
-.status-badge {
-    display: inline-block;
-    background: #E5F0ED;
-    color: #245B54;
-    padding: 5px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
-}
-
-.empty-state {
-    padding: 40px 15px;
-    text-align: center;
-    color: #77827D;
-}
-
-.empty-state i {
-    font-size: 35px;
-    color: #9BBDB5;
-}
+    <script src="../assets/vendor/bootstrap.bundle.min.js?v=123"></script>
+    <script src="../assets/js/admin-users.js"></script>
+</body>
+</html>

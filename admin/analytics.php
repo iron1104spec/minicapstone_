@@ -1,29 +1,40 @@
 <?php
 // admin/analytics.php
 require_once __DIR__ . '/analytics-logic.php';
+
+// Safe fallback para sa avatar function
+if (!function_exists('pcare_analytics_initials')) {
+    function pcare_analytics_initials(string $name): string {
+        $parts = preg_split('/\s+/', trim($name));
+        $initials = '';
+        foreach (array_slice($parts, 0, 2) as $part) {
+            if ($part !== '') $initials .= strtoupper(substr($part, 0, 1));
+        }
+        return $initials ?: 'U';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports & Analytics | PCare</title>
+    <title>Reports & Analytics | LabSync</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- LOCAL BOOTSTRAP & ICONS -->
+    <link href="../assets/vendor/bootstrap.min.css?v=123" rel="stylesheet">
+    <link href="../assets/vendor/bootstrap-icons.min.css?v=123" rel="stylesheet">
 
-    <!-- Chart.js -->
+    <!-- Chart.js (External) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- External CSS -->
-    <link rel="stylesheet" href="../assets/css/admin-analytics.css">
+    <link rel="stylesheet" href="../assets/css/admin-analytics.css?v=123">
 </head>
 <body>
 
@@ -34,7 +45,7 @@ require_once __DIR__ . '/analytics-logic.php';
         <a href="dashboard.php" class="brand">
             <span class="brand-icon"><i class="bi bi-pc-display-horizontal"></i></span>
             <span>
-                <span class="brand-name">PCare</span>
+                <span class="brand-name">LabSync</span>
                 <span class="brand-subtitle">LABORATORY MANAGEMENT</span>
             </span>
         </a>
@@ -58,7 +69,7 @@ require_once __DIR__ . '/analytics-logic.php';
                 </div>
                 <div>
                     <div class="admin-name"><?= e($_SESSION['full_name'] ?? 'Administrator') ?></div>
-                    <div class="admin-role">System Administrator</div>
+                    <div class="admin-role"><?= is_super_admin() ? 'Super Administrator' : 'System Administrator' ?></div>
                 </div>
             </div>
             <a href="../logout.php" class="sidebar-link logout-link"><i class="bi bi-box-arrow-left"></i> Sign Out</a>
@@ -73,36 +84,36 @@ require_once __DIR__ . '/analytics-logic.php';
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="breadcrumb-text">
-                    Administrator <span class="mx-2">/</span> <strong>Reports & Analytics</strong>
+                    <?= is_super_admin() ? 'Super Administrator' : 'Administrator' ?> <span class="mx-2">/</span> <strong>Reports & Analytics</strong>
                 </div>
             </div>
             <div class="topbar-right">
-                <span><span class="topbar-dot"></span> Administrator Portal</span>
+                <span><span class="topbar-dot"></span> <?= is_super_admin() ? 'Super Administrator Portal' : 'Administrator Portal' ?></span>
                 <span class="topbar-date"><i class="bi bi-calendar3 me-1"></i> <?= date('F d, Y') ?></span>
             </div>
         </header>
 
         <main class="main-content">
-            <!-- PAGE HEADING -->
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <!-- HERO BANNER -->
+            <section class="welcome-section">
                 <div>
-                    <p class="page-eyebrow">SYSTEM PERFORMANCE</p>
-                    <h1 class="page-title">Reports & Analytics</h1>
-                    <p class="page-description">
+                    <div class="welcome-label">SYSTEM PERFORMANCE</div>
+                    <h1 class="welcome-title">Reports & Analytics</h1>
+                    <p class="welcome-description">
                         Monitor issue reports, maintenance activity, and computer unit performance using database records.
                     </p>
                 </div>
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <span class="period-label"><i class="bi bi-calendar-range"></i> Last 12 Months</span>
-                    <button type="button" class="btn-primary-custom print-button" onclick="window.print()">
+                <div class="d-flex align-items-center gap-2 flex-wrap" style="position: relative; z-index: 1;">
+                    <span class="period-label" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3);"><i class="bi bi-calendar-range"></i> Last 12 Months</span>
+                    <button type="button" class="report-button print-button" onclick="window.print()" style="padding: 10px 18px; border-radius: 10px; font-size: 12px;">
                         <i class="bi bi-printer"></i> Print Report
                     </button>
                 </div>
-            </div>
+            </section>
 
             <!-- DATABASE ERROR NOTICE -->
             <?php if ($dbError): ?>
-                <div class="alert alert-danger mb-4">
+                <div class="alert alert-danger mb-4" style="border-radius: 12px; border: none; box-shadow: var(--shadow-sm);">
                     <i class="bi bi-exclamation-triangle me-2"></i>
                     Unable to retrieve all analytics data. Please check the PHP error log and database connection.
                 </div>
@@ -113,60 +124,60 @@ require_once __DIR__ . '/analytics-logic.php';
                 <div class="col-6 col-md-4 col-xl-2">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Total Reports</span>
-                            <span class="stat-icon"><i class="bi bi-clipboard-data"></i></span>
+                            <div class="stat-icon"><i class="bi bi-clipboard-data"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= number_format($stats['total']) ?></h3>
+                        <div class="stat-value"><?= number_format($stats['total']) ?></div>
+                        <div class="stat-label">Total Reports</div>
                         <div class="stat-note">All submitted issues</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-4 col-xl-2">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Pending</span>
-                            <span class="stat-icon"><i class="bi bi-clock-history"></i></span>
+                            <div class="stat-icon"><i class="bi bi-clock-history"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= number_format($stats['pending']) ?></h3>
+                        <div class="stat-value"><?= number_format($stats['pending']) ?></div>
+                        <div class="stat-label">Pending</div>
                         <div class="stat-note">Awaiting inspection</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-4 col-xl-2">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">In Progress</span>
-                            <span class="stat-icon"><i class="bi bi-tools"></i></span>
+                            <div class="stat-icon"><i class="bi bi-tools"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= number_format($stats['in_progress']) ?></h3>
+                        <div class="stat-value"><?= number_format($stats['in_progress']) ?></div>
+                        <div class="stat-label">In Progress</div>
                         <div class="stat-note">Inspection or repair</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-4 col-xl-2">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Resolved</span>
-                            <span class="stat-icon"><i class="bi bi-check-circle"></i></span>
+                            <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= number_format($stats['resolved']) ?></h3>
+                        <div class="stat-value"><?= number_format($stats['resolved']) ?></div>
+                        <div class="stat-label">Resolved</div>
                         <div class="stat-note">Successfully resolved</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-4 col-xl-2">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Unresolved</span>
-                            <span class="stat-icon"><i class="bi bi-exclamation-circle"></i></span>
+                            <div class="stat-icon"><i class="bi bi-exclamation-circle"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= number_format($stats['unresolved']) ?></h3>
+                        <div class="stat-value"><?= number_format($stats['unresolved']) ?></div>
+                        <div class="stat-label">Unresolved</div>
                         <div class="stat-note">Not resolved</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-4 col-xl-2">
                     <div class="stat-card">
                         <div class="stat-top">
-                            <span class="stat-label">Maintenance</span>
-                            <span class="stat-icon"><i class="bi bi-wrench-adjustable"></i></span>
+                            <div class="stat-icon"><i class="bi bi-wrench-adjustable"></i></div>
                         </div>
-                        <h3 class="stat-value"><?= number_format($stats['maintenance']) ?></h3>
+                        <div class="stat-value"><?= number_format($stats['maintenance']) ?></div>
+                        <div class="stat-label">Maintenance</div>
                         <div class="stat-note">Recorded activities</div>
                     </div>
                 </div>
@@ -181,7 +192,7 @@ require_once __DIR__ . '/analytics-logic.php';
                 <div class="chart-body">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                         <div>
-                            <div style="font-size:34px;font-weight:800;color:#245B54;letter-spacing:-1px;">
+                            <div style="font-size:34px;font-weight:800;color:var(--deep-green);letter-spacing:-1px;">
                                 <?= number_format($resolutionRate, 1) ?>%
                             </div>
                             <div class="text-secondary small mt-1">
@@ -189,8 +200,8 @@ require_once __DIR__ . '/analytics-logic.php';
                             </div>
                         </div>
                         <div style="flex:1;min-width:180px;max-width:520px;">
-                            <div class="progress" role="progressbar" aria-label="Resolution rate" aria-valuenow="<?= $resolutionRate ?>" aria-valuemin="0" aria-valuemax="100" style="height:12px;background:#E5F0ED;border-radius:20px;">
-                                <div class="progress-bar" style="width:<?= $resolutionRate ?>%;background:#4E968B;border-radius:20px;"></div>
+                            <div class="progress" role="progressbar" aria-label="Resolution rate" aria-valuenow="<?= $resolutionRate ?>" aria-valuemin="0" aria-valuemax="100" style="height:12px;background:var(--soft-mint);border-radius:20px;">
+                                <div class="progress-bar" style="width:<?= $resolutionRate ?>%;background:var(--primary);border-radius:20px;"></div>
                             </div>
                             <div class="d-flex justify-content-between mt-2 text-secondary" style="font-size:9px;">
                                 <span>0%</span><span>100%</span>
@@ -277,7 +288,7 @@ require_once __DIR__ . '/analytics-logic.php';
                         <div class="col-md-6">
                             <div class="detail-section">
                                 <span class="detail-label">Data Source</span>
-                                <div class="detail-value">PCare MySQL Database</div>
+                                <div class="detail-value">LabSync MySQL Database</div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -294,7 +305,7 @@ require_once __DIR__ . '/analytics-logic.php';
                         </div>
                     </div>
                     <p class="text-secondary mt-3 mb-0" style="font-size:10px;line-height:1.6;">
-                        These analytics are calculated from the records currently stored in the PCare database.
+                        These analytics are calculated from the records currently stored in the LabSync database.
                         The monthly trend covers the last 12 months. Other charts use all available issue reports.
                         The resolution rate is calculated using resolved reports divided by total reports.
                     </p>
@@ -302,7 +313,7 @@ require_once __DIR__ . '/analytics-logic.php';
             </section>
 
             <footer class="page-footer">
-                PCare · Administrator Portal · SLSU Lucena Campus
+                LabSync · <?= is_super_admin() ? 'Super Administrator Portal' : 'Administrator Portal' ?> · SLSU Lucena Campus
             </footer>
         </main>
     </div>
@@ -323,6 +334,7 @@ require_once __DIR__ . '/analytics-logic.php';
     </script>
 
     <!-- External JS -->
+    <script src="../assets/vendor/bootstrap.bundle.min.js?v=123"></script>
     <script src="../assets/js/admin-analytics.js"></script>
 
 </body>
