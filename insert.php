@@ -1,3 +1,4 @@
+
 <?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -55,10 +56,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (empty($errors)) {
                     $isActive = in_array($role, ['student', 'staff', 'faculty'], true) ? 1 : 0;
                     $insert = $pdo->prepare('INSERT INTO users (full_name, email, password_hash, role, id_number, department, contact_no, is_active) VALUES (:full_name, :email, :password_hash, :role, :id_number, :department, :contact_no, :is_active)');
-                    
+
                     $insert->execute([
-                        ':full_name' => $fullName, ':email' => $email, ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
-                        ':role' => $role, ':id_number' => $idNumber, ':department' => $department, ':contact_no' => $contactNo, ':is_active' => $isActive
+                        ':full_name' => $fullName,
+                        ':email' => $email,
+                        ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                        ':role' => $role,
+                        ':id_number' => $idNumber,
+                        ':department' => $department,
+                        ':contact_no' => $contactNo,
+                        ':is_active' => $isActive
                     ]);
 
                     $newUserId = (int) $pdo->lastInsertId();
@@ -68,12 +75,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $_SESSION['user_id'] = $newUserId;
                         $_SESSION['full_name'] = $fullName;
                         $_SESSION['email'] = $email;
-                        $_SESSION['role'] = $role; 
+                        $_SESSION['role'] = $role;
                         unset($_SESSION['registration_completed']);
                         redirect('student/dashboard.php');
                     } elseif ($role === 'personnel') {
                         $successMessage = 'Your IT Personnel account is pending admin approval.';
-                        $fullName = ''; $email = ''; $idNumber = ''; $department = ''; $contactNo = ''; $role = '';
+                        $fullName = '';
+                        $email = '';
+                        $idNumber = '';
+                        $department = '';
+                        $contactNo = '';
+                        $role = '';
                     }
                 }
             } catch (PDOException $ex) {
@@ -111,6 +123,7 @@ function field_error(array $errors, string $key): void {
             from { opacity: 0; transform: translateX(-30px); }
             to { opacity: 1; transform: translateX(0); }
         }
+
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -153,16 +166,16 @@ function field_error(array $errors, string $key): void {
         .left-panel .tag { opacity: 0; display: inline-block; font-size: 13px; font-weight: 800; letter-spacing: 2px; color: #A9D8CA; margin-bottom: 20px; text-transform: uppercase; animation: slideInLeft 0.8s ease forwards; animation-delay: 0.2s; }
         .left-panel h1 { opacity: 0; font-size: 54px; font-weight: 800; line-height: 1.15; margin: 0 0 24px 0; letter-spacing: -1.5px; animation: slideInLeft 0.8s ease forwards; animation-delay: 0.3s; }
         .left-panel h1 span { color: #6DB5A9; }
-        
+
         /* INAYOS ANG JUSTIFICATION PARA MADALING BASAHIN */
-        .left-panel p { 
+        .left-panel p {
             opacity: 0;
-            font-size: 16px; 
-            line-height: 1.8; 
-            color: rgba(255,255,255,0.9); 
-            max-width: 520px; 
-            text-align: left; 
-            animation: slideInLeft 0.8s ease forwards; 
+            font-size: 16px;
+            line-height: 1.8;
+            color: rgba(255,255,255,0.9);
+            max-width: 520px;
+            text-align: left;
+            animation: slideInLeft 0.8s ease forwards;
             animation-delay: 0.4s;
         }
 
@@ -186,18 +199,19 @@ function field_error(array $errors, string $key): void {
         .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .field.full { grid-column: 1 / -1; }
         .field label { display: block; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-        
+
         /* PINAGLAKI ANG MGA INPUTS PARA MUKHANG PREMIUM */
         .input-box { display: flex; align-items: center; background: #FBFCFB; border: 1.5px solid var(--border); border-radius: 10px; padding: 0 14px; height: 46px; transition: 0.2s; }
         .input-box:focus-within { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(67,140,127,0.12); }
         .input-box i { color: #91A29C; font-size: 16px; margin-right: 10px; }
         .input-box input, .input-box select { width: 100%; border: none; background: transparent; outline: none; font-size: 14px; color: var(--text); font-weight: 500; }
-        
+
         .btn-submit {
             width: 100%; height: 50px; background: var(--deep); color: white; border: none; border-radius: 10px;
             font-size: 16px; font-weight: 700; margin-top: 25px; cursor: pointer; transition: 0.3s;
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
+
         .btn-submit:hover { background: var(--primary); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(22,68,60,0.2); }
 
         .alert-error { background: #FFF5F5; color: #A83D3D; border: 1px solid #F2D0D0; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; }

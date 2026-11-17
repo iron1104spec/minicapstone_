@@ -1,35 +1,23 @@
-
 <?php
-require_once __DIR__ . '/includes/functions.php';
-require_once __DIR__ . '/includes/csrf.php';
+// logout.php
+session_start();
 
-// Only allow logout through a valid POST request.
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' ||
-    !csrf_verify($_POST['csrf_token'] ?? null)) {
-    redirect('index.php');
-}
+// Burahin lahat ng session data
+$_SESSION = array();
 
-// Clear all session data.
-$_SESSION = [];
-
-// Remove the session cookie.
-if (ini_get('session.use_cookies')) {
+// Burahin ang session cookie
+if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();
-
-    setcookie(
-        session_name(),
-        '',
-        time() - 42000,
-        $params['path'],
-        $params['domain'],
-        $params['secure'],
-        $params['httponly']
+    setcookie(session_name(), '', time() - 42000,
+        $params["path"], $params["domain"],
+        $params["secure"], $params["httponly"]
     );
 }
 
-// Destroy the session.
+// Sirain ang session
 session_destroy();
 
-// Return to homepage.
-header('Location: index.php');
+// Balik sa login page
+header("Location: login.php");
 exit;
+?>

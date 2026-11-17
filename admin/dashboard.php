@@ -20,59 +20,94 @@ $roleTitle      = $isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard';
 
     <!-- External CSS -->
     <link rel="stylesheet" href="../assets/css/admin-dashboard.css?v=123">
+
+    <!-- BAGONG LAYOUT CSS (Floating Dock) -->
+    <style>
+        /* --- TOP HEADER --- */
+        .custom-topbar {
+            position: fixed; top: 0; left: 0; width: 100%; height: 70px;
+            background: #ffffff; display: flex; justify-content: space-between;
+            align-items: center; padding: 0 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 9999;
+        }
+        .brand-area { display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit; }
+        .brand-icon { font-size: 24px; color: #0d2f24; }
+        .brand-name { display: block; font-weight: 800; font-size: 18px; color: #0d2f24; line-height: 1; }
+        .brand-caption { display: block; font-size: 9px; letter-spacing: 1px; color: #666; font-weight: 600; }
+
+        /* --- FLOATING DOCK --- */
+        .floating-dock {
+            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: row; gap: 8px; background-color: #0d2f24;
+            padding: 12px 24px; border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1); z-index: 9999;
+            max-width: 95%; overflow-x: auto;
+        }
+        .floating-dock::-webkit-scrollbar { display: none; }
+        .dock-item {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #a0b8b0; text-decoration: none; padding: 10px 16px;
+            border-radius: 16px; transition: all 0.3s ease; white-space: nowrap;
+        }
+        .dock-item i { font-size: 20px; margin-bottom: 4px; }
+        .dock-item span { font-size: 11px; font-weight: 500; }
+        .dock-item:hover { background-color: rgba(255, 255, 255, 0.1); color: #ffffff; transform: translateY(-4px); }
+        .dock-item.active { background-color: #1a4a3a; color: #ffffff; }
+
+        /* ========================================================= */
+        /* --- ITO ANG PWERSAHANG PAGBABAGO (FORCE OVERRIDE) --- */
+        /* ========================================================= */
+        .sidebar, .sidebar-overlay, .mobile-toggle, .topbar {
+            display: none !important; /* Pilitin itago ang lumang sidebar at topbar */
+        }
+        body {
+            padding-left: 0 !important;
+            margin-left: 0 !important;
+            background-color: #f4f7f6; /* Color ng background mo */
+        }
+        .main-wrapper, .dashboard-content, .main-content {
+            margin-left: 0 !important;
+            padding-top: 90px !important; /* Space para sa itaas */
+            padding-bottom: 120px !important; /* Space para sa dock sa baba */
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+            width: 100% !important;
+            max-width: 100vw !important;
+        }
+    </style>
 </head>
 <body>
 
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-<aside class="sidebar" id="sidebar">
-    <a href="dashboard.php" class="brand">
+<!-- BAGONG TOP HEADER (Logo & Profile) -->
+<header class="custom-topbar">
+    <a href="dashboard.php" class="brand-area">
         <span class="brand-icon"><i class="bi bi-pc-display-horizontal"></i></span>
         <span>
             <span class="brand-name">LabSync</span>
             <span class="brand-caption">LAB MANAGEMENT SYSTEM</span>
         </span>
     </a>
-
-    <div class="nav-label">MAIN MENU</div>
-
-    <nav class="sidebar-nav">
-        <a href="dashboard.php" class="nav-link-custom active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-        <a href="users.php" class="nav-link-custom"><i class="bi bi-people"></i> User Management</a>
-        <a href="computer-units.php" class="nav-link-custom"><i class="bi bi-pc-display"></i> Computer Units</a>
-        <a href="categories.php" class="nav-link-custom"><i class="bi bi-grid"></i> Issue Categories</a>
-        <a href="issue-reports.php" class="nav-link-custom"><i class="bi bi-clipboard-data"></i> Issue Reports</a>
-        <a href="maintenance-records.php" class="nav-link-custom"><i class="bi bi-tools"></i> Maintenance Records</a>
-        <a href="analytics.php" class="nav-link-custom"><i class="bi bi-bar-chart-line"></i> Reports & Analytics</a>
-    </nav>
-
-    <div class="sidebar-bottom">
-        <div class="nav-label">ACCOUNT</div>
-        <a href="../logout.php" class="nav-link-custom"><i class="bi bi-box-arrow-right"></i> Sign Out</a>
-        <div class="sidebar-profile">
-            <div class="profile-avatar"><?= e($adminInitials) ?></div>
-            <div class="overflow-hidden">
-                <div class="profile-name text-truncate"><?= e($adminName) ?></div>
-                <div class="profile-role"><?= e($roleLabel) ?></div>
+    <div class="d-flex align-items-center gap-3">
+        <span class="topbar-date d-none d-md-inline text-muted" style="font-size: 14px;">
+            <i class="bi bi-calendar3 me-1"></i> <?= e(date('F d, Y')) ?>
+        </span>
+        <div class="d-flex align-items-center gap-2 border-start ps-3">
+            <div class="topbar-avatar bg-dark text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; font-weight: bold; font-size: 14px;">
+                <?= e($adminInitials) ?>
             </div>
+            <div class="d-none d-sm-block">
+                <div class="profile-name" style="font-size: 14px; font-weight: 600; margin: 0; line-height: 1.2;"><?= e($adminName) ?></div>
+                <div class="profile-role" style="font-size: 12px; color: #666; margin: 0;"><?= e($roleLabel) ?></div>
+            </div>
+            <a href="../logout.php" class="btn btn-sm btn-outline-danger ms-2" title="Sign Out">
+                <i class="bi bi-box-arrow-right"></i>
+            </a>
         </div>
     </div>
-</aside>
+</header>
 
+<!-- MAIN CONTENT -->
 <div class="main-wrapper">
-    <header class="topbar">
-        <div class="d-flex align-items-center gap-3">
-            <button type="button" class="mobile-menu" id="menuToggle" aria-label="Toggle navigation">
-                <i class="bi bi-list"></i>
-            </button>
-            <span class="topbar-label"><?= e($roleLabel) ?> Workspace</span>
-        </div>
-        <div class="topbar-right">
-            <span class="topbar-date"><i class="bi bi-calendar3 me-1"></i> <?= e(date('F d, Y')) ?></span>
-            <div class="topbar-avatar"><?= e($adminInitials) ?></div>
-        </div>
-    </header>
-
     <main class="dashboard-content">
         <section class="welcome-section d-flex justify-content-between align-items-center mb-5">
             <div>
@@ -194,6 +229,31 @@ $roleTitle      = $isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard';
         </section>
     </main>
 </div>
+
+<!-- FLOATING BOTTOM DOCK (Menu) -->
+<nav class="floating-dock">
+    <a href="dashboard.php" class="dock-item active">
+        <i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span>
+    </a>
+    <a href="users.php" class="dock-item">
+        <i class="bi bi-people"></i><span>Users</span>
+    </a>
+    <a href="computer-units.php" class="dock-item">
+        <i class="bi bi-pc-display"></i><span>Computers</span>
+    </a>
+    <a href="categories.php" class="dock-item">
+        <i class="bi bi-grid"></i><span>Categories</span>
+    </a>
+    <a href="issue-reports.php" class="dock-item">
+        <i class="bi bi-clipboard-data"></i><span>Reports</span>
+    </a>
+    <a href="maintenance-records.php" class="dock-item">
+        <i class="bi bi-tools"></i><span>Maintenance</span>
+    </a>
+    <a href="analytics.php" class="dock-item">
+        <i class="bi bi-bar-chart-line"></i><span>Analytics</span>
+    </a>
+</nav>
 
 <!-- LOCAL BOOTSTRAP JS -->
 <script src="../assets/vendor/bootstrap.bundle.min.js?v=123"></script>
