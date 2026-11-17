@@ -1,5 +1,8 @@
-
 <?php
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -36,7 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 150) $errors['email'] = 'Enter a valid email.';
         if (!preg_match('/^[A-Za-z0-9\-]{3,50}$/', $idNumber)) $errors['id_number'] = 'Use 3 to 50 letters, numbers, or hyphens.';
         if (mb_strlen($department) < 2 || mb_strlen($department) > 100) $errors['department'] = 'Enter your department.';
-        if (!preg_match('/^[0-9+\-\s()]{7,30}$/', $contactNo)) $errors['contact_no'] = 'Enter a valid contact number.';
+        
+        if (strlen($contactNo) < 7 || strlen($contactNo) > 30) {
+            $errors['contact_no'] = 'Contact number must be 7-30 characters.';
+        } elseif (!preg_match('/^[0-9\s\-\+\(\)]+$/', $contactNo)) {
+            $errors['contact_no'] = 'Enter a valid contact number.';
+        }
+
         if (!in_array($role, ['student', 'staff', 'faculty', 'personnel'], true)) $errors['role'] = 'Select a valid role.';
         if (strlen($password) < 8 || !preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) $errors['password'] = 'Use at least 8 characters with letters and numbers.';
         if ($password !== $confirm) $errors['confirm_password'] = 'Passwords do not match.';
@@ -80,12 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         redirect('student/dashboard.php');
                     } elseif ($role === 'personnel') {
                         $successMessage = 'Your IT Personnel account is pending admin approval.';
-                        $fullName = '';
-                        $email = '';
-                        $idNumber = '';
-                        $department = '';
-                        $contactNo = '';
-                        $role = '';
+                        $fullName = ''; $email = ''; $idNumber = ''; $department = ''; $contactNo = ''; $role = '';
                     }
                 }
             } catch (PDOException $ex) {
@@ -96,6 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+if (!function_exists('e')) {
+    function e($string) { return htmlspecialchars($string ?? '', ENT_QUOTES, 'UTF-8'); }
+}
 function field_error(array $errors, string $key): void {
     if (isset($errors[$key])) echo '<p class="register-error" role="alert">' . e($errors[$key]) . '</p>';
 }
@@ -105,7 +112,7 @@ function field_error(array $errors, string $key): void {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Create Account | LabSync</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -129,9 +136,13 @@ function field_error(array $errors, string $key): void {
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* PIPIGILAN ANG SCROLL SA DESKTOP */
+        /* 🚨 ITO ANG PIPIGIL SA SCROLLBAR SA DESKTOP 🚨 */
         @media (min-width: 1025px) {
-            html, body { height: 100vh !important; overflow: hidden !important; margin: 0; }
+            html, body { 
+                height: 100vh !important; 
+                overflow: hidden !important; /* Walang scrollbar, kahit anong mangyari */
+                margin: 0; 
+            }
         }
 
         * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
@@ -142,7 +153,6 @@ function field_error(array $errors, string $key): void {
             display: flex;
         }
 
-        /* BINAWASAN ANG OPACITY PARA MAKITA ANG DETAILS NG BACKGROUND */
         .overlay {
             position: absolute; inset: 0;
             background: linear-gradient(135deg, rgba(15,51,44,0.85), rgba(22,68,60,0.90));
@@ -167,7 +177,6 @@ function field_error(array $errors, string $key): void {
         .left-panel h1 { opacity: 0; font-size: 54px; font-weight: 800; line-height: 1.15; margin: 0 0 24px 0; letter-spacing: -1.5px; animation: slideInLeft 0.8s ease forwards; animation-delay: 0.3s; }
         .left-panel h1 span { color: #6DB5A9; }
 
-        /* INAYOS ANG JUSTIFICATION PARA MADALING BASAHIN */
         .left-panel p {
             opacity: 0;
             font-size: 16px;
@@ -183,32 +192,31 @@ function field_error(array $errors, string $key): void {
         .right-panel {
             flex: 1;
             display: flex; align-items: center; justify-content: center;
-            padding: 30px;
+            padding: 20px 30px;
         }
 
         .register-card {
-            background: #FFFFFF; width: 100%; max-width: 480px; padding: 40px;
+            background: #FFFFFF; width: 100%; max-width: 480px; padding: 30px 40px; /* Binawasan ko ng konti ang vertical padding para hindi sumobra sa screen */
             border-radius: 24px; box-shadow: 0 24px 64px rgba(0, 0, 0, 0.4);
             animation: fadeInUp 0.8s ease forwards;
         }
 
-        .form-header { margin-bottom: 30px; text-align: left; }
+        .form-header { margin-bottom: 20px; text-align: left; } /* Binawasan ang margin-bottom */
         .form-header h2 { font-size: 28px; font-weight: 800; color: var(--deep); margin: 0 0 6px 0; letter-spacing: -0.8px; }
         .form-header p { font-size: 14px; color: var(--muted); margin: 0; }
 
-        .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } /* Binawasan ang gap */
         .field.full { grid-column: 1 / -1; }
-        .field label { display: block; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+        .field label { display: block; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 
-        /* PINAGLAKI ANG MGA INPUTS PARA MUKHANG PREMIUM */
-        .input-box { display: flex; align-items: center; background: #FBFCFB; border: 1.5px solid var(--border); border-radius: 10px; padding: 0 14px; height: 46px; transition: 0.2s; }
+        .input-box { display: flex; align-items: center; background: #FBFCFB; border: 1.5px solid var(--border); border-radius: 10px; padding: 0 14px; height: 42px; transition: 0.2s; } /* Binawasan ang height */
         .input-box:focus-within { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(67,140,127,0.12); }
         .input-box i { color: #91A29C; font-size: 16px; margin-right: 10px; }
         .input-box input, .input-box select { width: 100%; border: none; background: transparent; outline: none; font-size: 14px; color: var(--text); font-weight: 500; }
 
         .btn-submit {
-            width: 100%; height: 50px; background: var(--deep); color: white; border: none; border-radius: 10px;
-            font-size: 16px; font-weight: 700; margin-top: 25px; cursor: pointer; transition: 0.3s;
+            width: 100%; height: 46px; background: var(--deep); color: white; border: none; border-radius: 10px;
+            font-size: 16px; font-weight: 700; margin-top: 20px; cursor: pointer; transition: 0.3s;
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
 
@@ -216,11 +224,12 @@ function field_error(array $errors, string $key): void {
 
         .alert-error { background: #FFF5F5; color: #A83D3D; border: 1px solid #F2D0D0; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; }
         .alert-success { background: #F0F9F4; color: #245B54; border: 1px solid #C8E5D8; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 15px; }
-        .register-error { color: #C44747; font-size: 11px; font-weight: 600; margin-top: 4px; display: block; }
+        .register-error { color: #C44747; font-size: 11px; font-weight: 600; margin-top: 2px; display: block; }
 
         /* RESPONSIVE PARA SA MOBILE */
         @media (max-width: 1024px) {
-            body { display: block; overflow-y: auto; }
+            html, body { height: auto !important; overflow: auto !important; }
+            body { display: block; }
             .split-layout { flex-direction: column; }
             .left-panel { padding: 60px 30px; text-align: center; }
             .left-panel h1 { font-size: 42px; }
@@ -235,7 +244,6 @@ function field_error(array $errors, string $key): void {
     <div class="overlay"></div>
 
     <div class="split-layout">
-        <!-- KALIWA -->
         <div class="left-panel">
             <a href="index.php" class="brand-logo">LabSync.</a>
             <span class="tag">B204 Computer Laboratory · SLSU Lucena</span>
@@ -243,7 +251,6 @@ function field_error(array $errors, string $key): void {
             <p>Report issues, track maintenance, and help keep our computer laboratories in top condition. Create your account today.</p>
         </div>
 
-        <!-- KANAN -->
         <div class="right-panel">
             <div class="register-card">
                 <div class="form-header">
@@ -259,7 +266,7 @@ function field_error(array $errors, string $key): void {
                     <div class="alert-success"><i class="bi bi-check-circle"></i> <?= e($successMessage) ?></div>
                 <?php endif; ?>
 
-                <form method="POST" action="insert.php">
+                <form method="POST" action="insert.php" autocomplete="off">
                     <?= csrf_field() ?>
                     <div class="fields">
                         <div class="field full">
@@ -270,7 +277,7 @@ function field_error(array $errors, string $key): void {
 
                         <div class="field full">
                             <label>Email Address</label>
-                            <div class="input-box"><i class="bi bi-envelope"></i><input type="email" name="email" value="<?= e($email) ?>" placeholder="name@example.com" required></div>
+                            <div class="input-box"><i class="bi bi-envelope"></i><input type="email" name="email" value="<?= e($email) ?>" placeholder="name@example.com" required autocomplete="off"></div>
                             <?php field_error($errors, 'email'); ?>
                         </div>
 
@@ -309,13 +316,13 @@ function field_error(array $errors, string $key): void {
 
                         <div class="field">
                             <label>Password</label>
-                            <div class="input-box"><i class="bi bi-lock"></i><input type="password" name="password" placeholder="Create password" required></div>
+                            <div class="input-box"><i class="bi bi-lock"></i><input type="password" name="password" placeholder="Create password" required autocomplete="new-password"></div>
                             <?php field_error($errors, 'password'); ?>
                         </div>
 
                         <div class="field">
                             <label>Confirm Password</label>
-                            <div class="input-box"><i class="bi bi-lock-fill"></i><input type="password" name="confirm_password" placeholder="Repeat password" required></div>
+                            <div class="input-box"><i class="bi bi-lock-fill"></i><input type="password" name="confirm_password" placeholder="Repeat password" required autocomplete="new-password"></div>
                             <?php field_error($errors, 'confirm_password'); ?>
                         </div>
                     </div>
@@ -323,7 +330,7 @@ function field_error(array $errors, string $key): void {
                     <button type="submit" class="btn-submit">Create Account <i class="bi bi-arrow-right"></i></button>
                 </form>
 
-                <div style="text-align: center; margin-top: 20px;">
+                <div style="text-align: center; margin-top: 15px;">
                     <span style="font-size: 14px; color: var(--muted);">Already have an account?</span>
                     <a href="login.php" style="color: var(--primary); font-weight: 700; text-decoration: none; margin-left: 5px;">Sign In</a>
                 </div>
