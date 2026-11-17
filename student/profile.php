@@ -21,7 +21,13 @@ $idNumber = '';
 $department = '';
 $contactNo = '';
 
+
+// ==========================================
+// GET STUDENT PROFILE
+// ==========================================
+
 try {
+
     $stmt = $pdo->prepare("
         SELECT
             user_id,
@@ -36,7 +42,10 @@ try {
         LIMIT 1
     ");
 
-    $stmt->execute(['user_id' => $userId]);
+    $stmt->execute([
+        'user_id' => $userId
+    ]);
+
     $profile = $stmt->fetch();
 
     if (!$profile) {
@@ -50,17 +59,26 @@ try {
     $contactNo = $profile['contact_no'];
 
 } catch (Throwable $e) {
+
     error_log($e->getMessage());
+
     $databaseError = true;
 }
 
 
+// ==========================================
 // PROCESS PROFILE UPDATE
+// ==========================================
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$databaseError) {
 
     if (!csrf_verify($_POST['csrf_token'] ?? null)) {
+
         $errors[] = 'Invalid request. Please refresh the page and try again.';
+
     } else {
+
+        // GET FORM VALUES
 
         $fullName = trim($_POST['full_name'] ?? '');
         $email = strtolower(trim($_POST['email'] ?? ''));
@@ -68,50 +86,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$databaseError) {
         $department = trim($_POST['department'] ?? '');
         $contactNo = trim($_POST['contact_no'] ?? '');
 
+
+        // ==================================
+        // VALIDATE FULL NAME
+        // ==================================
+
         if ($fullName === '') {
+
             $errors[] = 'Full name is required.';
+
         } elseif (strlen($fullName) > 150) {
+
             $errors[] = 'Full name must not exceed 150 characters.';
+
         }
+
+
+        // ==================================
+        // VALIDATE EMAIL
+        // ==================================
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
             $errors[] = 'Please enter a valid email address.';
+
         } elseif (strlen($email) > 150) {
+
             $errors[] = 'Email address is too long.';
+
         }
 
+
+        // ==================================
+        // VALIDATE STUDENT ID
+        // ==================================
+
         if ($idNumber === '') {
+
             $errors[] = 'Student ID number is required.';
+
         } elseif (
             strlen($idNumber) > 50 ||
             !preg_match('/^[A-Za-z0-9-]+$/', $idNumber)
         ) {
+
             $errors[] = 'Please enter a valid student ID number.';
+
         }
+
+
+        // ==================================
+        // VALIDATE DEPARTMENT
+        // ==================================
 
         if ($department === '') {
+
             $errors[] = 'Department is required.';
+
         } elseif (strlen($department) > 100) {
+
             $errors[] = 'Department must not exceed 100 characters.';
+
         }
 
+
+        // ==================================
+        // VALIDATE CONTACT NUMBER
+        // ==================================
+
         if ($contactNo === '') {
+
             $errors[] = 'Contact number is required.';
+
         } elseif (
             strlen($contactNo) > 30 ||
             !preg_match('/^[0-9+\-\s()]{7,30}$/', $contactNo)
         ) {
+
             $errors[] = 'Please enter a valid contact number.';
+
         }
 
 
-        // CHECK DUPLICATE EMAIL OR ID
+        // ==================================
+        // CHECK DUPLICATE EMAIL / STUDENT ID
+        // ==================================
+
         if (empty($errors)) {
+
             try {
+
                 $stmt = $pdo->prepare("
                     SELECT user_id
                     FROM users
-                    WHERE (email = :email OR id_number = :id_number)
+                    WHERE (
+                        email = :email
+                        OR id_number = :id_number
+                    )
                     AND user_id <> :user_id
                     LIMIT 1
                 ");
@@ -123,19 +194,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$databaseError) {
                 ]);
 
                 if ($stmt->fetch()) {
+
                     $errors[] = 'Email address or student ID is already used by another account.';
+
                 }
 
             } catch (PDOException $e) {
+
                 error_log($e->getMessage());
+
                 $errors[] = 'Unable to validate your account information.';
+
             }
+
         }
 
 
-        // UPDATE PROFILE
+        // ==================================
+        // UPDATE STUDENT PROFILE
+        // ==================================
+
         if (empty($errors)) {
+
             try {
+
                 $stmt = $pdo->prepare("
                     UPDATE users
                     SET
@@ -158,37 +240,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$databaseError) {
                     'user_id' => $userId
                 ]);
 
+                // UPDATE SESSION INFORMATION
+
                 $_SESSION['full_name'] = $fullName;
                 $_SESSION['email'] = $email;
 
-                flash_set('success', 'Your profile has been updated successfully.');
+                // SUCCESS MESSAGE
+
+                flash_set(
+                    'success',
+                    'Your profile has been updated successfully.'
+                );
 
                 redirect('profile.php');
 
             } catch (PDOException $e) {
+
                 error_log($e->getMessage());
+
                 $errors[] = 'Unable to update your profile. Please try again.';
+
             }
+
         }
+
     }
+
 }
 
 
-// PROFILE INITIALS
+// ==========================================
+// GENERATE PROFILE INITIALS
+// ==========================================
+
 $nameParts = preg_split('/\s+/', trim($fullName));
+
 $initials = '';
 
 if (!empty($nameParts[0])) {
+
     $initials .= strtoupper(substr($nameParts[0], 0, 1));
+
 }
 
 if (count($nameParts) > 1) {
+
     $initials .= strtoupper(substr(end($nameParts), 0, 1));
+
 }
 
 if ($initials === '') {
+
     $initials = 'S';
+
 }
+
+
+// ACCOUNT ROLE DISPLAY
+
+$roleLabel = 'Student';
 
 ?>
 
@@ -198,11 +308,18 @@ if ($initials === '') {
 <head>
 
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#16443D">
 
     <title>My Profile | LabSync</title>
 
+
+    <!-- GOOGLE FONTS -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
+
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link
@@ -210,294 +327,54 @@ if ($initials === '') {
         rel="stylesheet"
     >
 
+
+    <!-- BOOTSTRAP -->
+
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
         rel="stylesheet"
     >
+
+
+    <!-- BOOTSTRAP ICONS -->
 
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
         rel="stylesheet"
     >
 
-    <style>
 
-        :root {
-            --primary: #4E968B;
-            --deep-green: #245B54;
-            --soft-mint: #E5F0ED;
-            --background: #F7F8F6;
-            --text: #303C39;
-            --muted: #78827F;
-            --white: #FFFFFF;
-            --border: #E8ECE9;
-        }
+    <!-- PROFILE CUSTOM CSS -->
 
-        body {
-            background: var(--background);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-        }
-
-        .dashboard-content {
-            max-width: 1450px;
-            margin: auto;
-            padding: 42px 30px 60px;
-        }
-
-        .welcome-label {
-            color: var(--primary);
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1.4px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-
-        .welcome-title {
-            color: var(--deep-green);
-            font-size: clamp(25px, 4vw, 32px);
-            font-weight: 800;
-            letter-spacing: -1.2px;
-            margin-bottom: 9px;
-        }
-
-        .welcome-description {
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.7;
-            margin-bottom: 0;
-        }
-
-        .section-heading {
-            color: var(--deep-green);
-            font-size: 17px;
-            font-weight: 800;
-            letter-spacing: -.4px;
-        }
-
-        .section-description {
-            color: var(--muted);
-            font-size: 12px;
-        }
-
-        .profile-layout {
-            display: grid;
-            grid-template-columns: 290px minmax(0, 1fr);
-            gap: 20px;
-            align-items: start;
-        }
-
-        .profile-card,
-        .information-card {
-            height: 100%;
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 15px;
-        }
-
-        .profile-card {
-            padding: 28px 22px;
-            text-align: center;
-        }
-
-        .profile-avatar {
-            width: 78px;
-            height: 78px;
-            display: grid;
-            place-items: center;
-            margin: 0 auto 17px;
-            border-radius: 22px;
-            background: var(--soft-mint);
-            color: var(--deep-green);
-            font-size: 25px;
-            font-weight: 800;
-        }
-
-        .profile-name {
-            color: var(--deep-green);
-            font-size: 16px;
-            font-weight: 800;
-            margin-bottom: 6px;
-            overflow-wrap: anywhere;
-        }
-
-        .profile-email {
-            color: var(--muted);
-            font-size: 11px;
-            overflow-wrap: anywhere;
-        }
-
-        .profile-role {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 12px;
-            padding: 7px 12px;
-            border-radius: 20px;
-            background: var(--soft-mint);
-            color: var(--deep-green);
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        .profile-divider {
-            height: 1px;
-            background: var(--border);
-            margin: 23px 0;
-        }
-
-        .profile-note {
-            color: var(--muted);
-            font-size: 11px;
-            line-height: 1.8;
-            text-align: left;
-        }
-
-        .information-card {
-            padding: 25px;
-        }
-
-        .information-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .information-icon {
-            width: 42px;
-            height: 42px;
-            display: grid;
-            place-items: center;
-            border-radius: 12px;
-            background: var(--soft-mint);
-            color: var(--deep-green);
-            font-size: 18px;
-        }
-
-        .form-label {
-            color: var(--text);
-            font-size: 11px;
-            font-weight: 700;
-            margin-bottom: 9px;
-        }
-
-        .form-control {
-            min-height: 45px;
-            padding: 11px 13px;
-            border: 1px solid var(--border);
-            border-radius: 9px;
-            background: #FCFDFC;
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            font-size: 12px;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(78, 150, 139, .12);
-        }
-
-        .form-control:disabled {
-            background: #F1F4F2;
-            color: var(--muted);
-        }
-
-        .form-hint {
-            color: var(--muted);
-            font-size: 10px;
-            margin-top: 7px;
-        }
-
-        .form-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            padding-top: 22px;
-            margin-top: 22px;
-            border-top: 1px solid var(--border);
-        }
-
-        .save-button {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 11px 18px;
-            border: none;
-            border-radius: 9px;
-            background: var(--deep-green);
-            color: var(--white);
-            font-size: 11px;
-            font-weight: 700;
-            transition: .2s ease;
-        }
-
-        .save-button:hover {
-            background: var(--primary);
-            color: var(--white);
-            transform: translateY(-2px);
-        }
-
-        .cancel-button {
-            display: inline-flex;
-            align-items: center;
-            padding: 11px 18px;
-            border: 1px solid var(--border);
-            border-radius: 9px;
-            background: var(--white);
-            color: var(--text);
-            font-size: 11px;
-            font-weight: 700;
-            text-decoration: none;
-        }
-
-        .cancel-button:hover {
-            background: var(--background);
-            color: var(--deep-green);
-        }
-
-        .profile-alert {
-            padding: 14px 17px;
-            border-radius: 11px;
-            font-size: 12px;
-        }
-
-        @media (max-width: 767px) {
-
-            .dashboard-content {
-                padding: 28px 17px 45px;
-            }
-
-            .profile-layout {
-                grid-template-columns: 1fr;
-            }
-
-            .profile-card {
-                padding: 25px 20px;
-            }
-
-            .information-card {
-                padding: 21px 17px;
-            }
-
-        }
-
-    </style>
+    <link
+        rel="stylesheet"
+        href="../assets/css/student-profile.css?v=2"
+    >
 
 </head>
 
+
 <body>
 
-    <!-- SAME NAVIGATION AS STUDENT DASHBOARD -->
+
+    <!-- ==================================
+         STUDENT NAVIGATION
+    =================================== -->
+
     <?php require_once __DIR__ . '/../includes/student-nav.php'; ?>
 
 
+    <!-- ==================================
+         MAIN CONTENT
+    =================================== -->
+
     <main class="dashboard-content">
 
-        <!-- PAGE HEADER -->
+
+        <!-- ==================================
+             PAGE HEADER
+        =================================== -->
+
         <section class="mb-4">
 
             <div class="welcome-label">
@@ -510,38 +387,65 @@ if ($initials === '') {
 
             <p class="welcome-description">
                 Manage your personal information and account details.
+                Keep your LabSync account updated and accurate.
             </p>
 
         </section>
 
 
+
+        <!-- ==================================
+             DATABASE ERROR
+        =================================== -->
+
         <?php if ($databaseError): ?>
 
             <div class="alert alert-danger profile-alert">
-                <i class="bi bi-exclamation-circle me-2"></i>
-                Unable to load your profile information. Please try again later.
+
+                <i class="bi bi-exclamation-circle-fill me-2"></i>
+
+                <strong>Unable to load your profile.</strong>
+
+                Please try again later.
+
             </div>
+
 
         <?php else: ?>
 
 
-            <!-- SUCCESS MESSAGE -->
+            <!-- ==================================
+                 SUCCESS MESSAGE
+            =================================== -->
+
             <?php if ($successMessage): ?>
 
                 <div class="alert alert-success profile-alert">
-                    <i class="bi bi-check-circle me-2"></i>
+
+                    <i class="bi bi-check-circle-fill me-2"></i>
+
+                    <strong>Profile Updated!</strong>
+
                     <?= e($successMessage) ?>
+
                 </div>
 
             <?php endif; ?>
 
 
-            <!-- VALIDATION ERRORS -->
+
+            <!-- ==================================
+                 VALIDATION ERRORS
+            =================================== -->
+
             <?php if (!empty($errors)): ?>
 
                 <div class="alert alert-danger profile-alert">
 
-                    <strong>Please check the following:</strong>
+                    <strong>
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Please check the following:
+                    </strong>
 
                     <ul class="mb-0 mt-2">
 
@@ -558,33 +462,74 @@ if ($initials === '') {
             <?php endif; ?>
 
 
+
+            <!-- ==================================
+                 PROFILE LAYOUT
+            =================================== -->
+
             <div class="profile-layout">
 
-                <!-- PROFILE OVERVIEW -->
+
+                <!-- ==================================
+                     LEFT: PROFILE OVERVIEW
+                =================================== -->
+
                 <aside class="profile-card">
 
+
+                    <!-- PROFILE AVATAR -->
+
                     <div class="profile-avatar">
+
                         <?= e($initials) ?>
+
                     </div>
 
+
+
+                    <!-- STUDENT NAME -->
+
                     <h2 class="profile-name">
+
                         <?= e($fullName) ?>
+
                     </h2>
 
+
+
+                    <!-- STUDENT EMAIL -->
+
                     <p class="profile-email mb-0">
+
                         <?= e($email) ?>
+
                     </p>
 
+
+
+                    <!-- ACCOUNT ROLE -->
+
                     <span class="profile-role">
+
                         <i class="bi bi-person-check-fill"></i>
-                        Student / Staff
+
+                        <?= e($roleLabel) ?>
+
                     </span>
+
+
+
+                    <!-- DIVIDER -->
 
                     <div class="profile-divider"></div>
 
+
+
+                    <!-- ACCOUNT INFORMATION NOTE -->
+
                     <div class="profile-note">
 
-                        <strong class="d-block mb-2" style="color: var(--deep-green);">
+                        <strong>
                             Account Information
                         </strong>
 
@@ -593,41 +538,77 @@ if ($initials === '') {
 
                     </div>
 
+
                 </aside>
 
 
-                <!-- EDIT PROFILE FORM -->
+
+                <!-- ==================================
+                     RIGHT: PERSONAL INFORMATION
+                =================================== -->
+
                 <section class="information-card">
+
+
+                    <!-- CARD HEADER -->
 
                     <div class="information-header">
 
+
                         <div>
-                            <h2 class="section-heading mb-1">
+
+                            <h2 class="section-heading">
+
                                 Personal Information
+
                             </h2>
 
                             <p class="section-description mb-0">
+
                                 Update the information associated with your account.
+
                             </p>
+
                         </div>
 
+
+
+                        <!-- HEADER ICON -->
+
                         <div class="information-icon">
+
                             <i class="bi bi-person-vcard"></i>
+
                         </div>
+
 
                     </div>
 
 
-                    <form method="POST" action="">
+
+                    <!-- ==================================
+                         EDIT PROFILE FORM
+                    =================================== -->
+
+                    <form method="POST" action="" autocomplete="on">
 
                         <?= csrf_field() ?>
 
+
                         <div class="row g-3">
+
+
+                            <!-- FULL NAME -->
 
                             <div class="col-12">
 
-                                <label for="full_name" class="form-label">
+                                <label
+                                    for="full_name"
+                                    class="form-label"
+                                >
+
                                     Full Name
+
                                 </label>
 
                                 <input
@@ -637,16 +618,26 @@ if ($initials === '') {
                                     name="full_name"
                                     value="<?= e($fullName) ?>"
                                     maxlength="150"
+                                    autocomplete="name"
+                                    placeholder="Enter your full name"
                                     required
                                 >
 
                             </div>
 
 
+
+                            <!-- EMAIL ADDRESS -->
+
                             <div class="col-md-6">
 
-                                <label for="email" class="form-label">
+                                <label
+                                    for="email"
+                                    class="form-label"
+                                >
+
                                     Email Address
+
                                 </label>
 
                                 <input
@@ -656,16 +647,26 @@ if ($initials === '') {
                                     name="email"
                                     value="<?= e($email) ?>"
                                     maxlength="150"
+                                    autocomplete="email"
+                                    placeholder="Enter your email address"
                                     required
                                 >
 
                             </div>
 
 
+
+                            <!-- STUDENT ID -->
+
                             <div class="col-md-6">
 
-                                <label for="id_number" class="form-label">
+                                <label
+                                    for="id_number"
+                                    class="form-label"
+                                >
+
                                     Student ID Number
+
                                 </label>
 
                                 <input
@@ -675,16 +676,25 @@ if ($initials === '') {
                                     name="id_number"
                                     value="<?= e($idNumber) ?>"
                                     maxlength="50"
+                                    placeholder="Enter your student ID"
                                     required
                                 >
 
                             </div>
 
 
+
+                            <!-- DEPARTMENT -->
+
                             <div class="col-md-6">
 
-                                <label for="department" class="form-label">
+                                <label
+                                    for="department"
+                                    class="form-label"
+                                >
+
                                     Department
+
                                 </label>
 
                                 <input
@@ -694,16 +704,25 @@ if ($initials === '') {
                                     name="department"
                                     value="<?= e($department) ?>"
                                     maxlength="100"
+                                    placeholder="Enter your department"
                                     required
                                 >
 
                             </div>
 
 
+
+                            <!-- CONTACT NUMBER -->
+
                             <div class="col-md-6">
 
-                                <label for="contact_no" class="form-label">
+                                <label
+                                    for="contact_no"
+                                    class="form-label"
+                                >
+
                                     Contact Number
+
                                 </label>
 
                                 <input
@@ -713,56 +732,103 @@ if ($initials === '') {
                                     name="contact_no"
                                     value="<?= e($contactNo) ?>"
                                     maxlength="30"
+                                    autocomplete="tel"
+                                    placeholder="Enter your contact number"
                                     required
                                 >
 
                             </div>
 
 
+
+                            <!-- ACCOUNT ROLE -->
+
                             <div class="col-12">
 
-                                <label class="form-label">
+                                <label
+                                    for="account_role"
+                                    class="form-label"
+                                >
+
                                     Account Role
+
                                 </label>
 
                                 <input
                                     type="text"
                                     class="form-control"
-                                    value="Student"
+                                    id="account_role"
+                                    value="<?= e(ucfirst($profile['role'])) ?>"
                                     disabled
                                 >
 
                                 <p class="form-hint">
+
                                     Your account role cannot be changed from this page.
+
                                 </p>
 
                             </div>
 
+
                         </div>
 
+
+
+                        <!-- ==================================
+                             FORM ACTION BUTTONS
+                        =================================== -->
 
                         <div class="form-actions">
 
-                            <button type="submit" class="save-button">
+
+                            <!-- SAVE CHANGES -->
+
+                            <button
+                                type="submit"
+                                class="save-button"
+                            >
+
                                 <i class="bi bi-check2-circle"></i>
+
                                 Save Changes
+
                             </button>
 
-                            <a href="dashboard.php" class="cancel-button">
+
+
+                            <!-- CANCEL -->
+
+                            <a
+                                href="dashboard.php"
+                                class="cancel-button"
+                            >
+
+                                <i class="bi bi-arrow-left"></i>
+
                                 Cancel
+
                             </a>
+
 
                         </div>
 
+
                     </form>
+
 
                 </section>
 
+
             </div>
+
 
         <?php endif; ?>
 
+
     </main>
 
+
 </body>
+
 </html>
